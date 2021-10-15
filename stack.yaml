@@ -1,0 +1,14 @@
+resolver:
+  url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/12.yaml
+
+packages:
+- .
+
+system-ghc: true
+
+nix:
+  enable: true
+  packages: [zlib, llvmPackages_12.llvm]
+
+extra-deps:
+- persistent-mongoDB-2.13.0.0@sha256:66b9fcd3d3084068653e3898db867e5f49c4ff3a6040d595d549c52877220db5,2744

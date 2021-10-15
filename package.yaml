@@ -1,0 +1,28 @@
+name:                obskura
+version:             0.1.0.0
+github:              "githubuser/gardspirito"
+license:             BSD3
+maintainer:          "guardspirit@protonmail.com"
+copyright:           "2021 obscurative.ru"
+
+dependencies:
+- base >= 4
+- template-haskell >= 2
+- network >= 3
+- yesod >= 1
+- persistent >= 2
+- persistent-mongoDB >= 2
+- mongoDB >= 2
+
+executables:
+  obskura:
+    main:                App.hs
+    source-dirs:         app
+    ghc-options:
+    - -O2
+    - -fllvm
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    #dependencies:
+    #- ne
