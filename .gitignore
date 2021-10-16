@@ -1,5 +1,4 @@
 .stack-work
 elm-stuff
-elm.json
-elm.min.json
 client_session_key.aes
+stat/*.js

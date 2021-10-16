@@ -26,10 +26,14 @@ executable obskura
   ghc-options: -O2 -fllvm -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4
+    , bytestring >=0.10
+    , filepath >=1.4
     , mongoDB >=2
     , network >=3
     , persistent >=2
     , persistent-mongoDB >=2
     , template-haskell >=2
+    , text >=1
     , yesod >=1
+    , yesod-core >=1
   default-language: Haskell2010

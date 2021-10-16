@@ -10,9 +10,13 @@ dependencies:
 - template-haskell >= 2
 - network >= 3
 - yesod >= 1
+- yesod-core >= 1
 - persistent >= 2
 - persistent-mongoDB >= 2
 - mongoDB >= 2
+- text >= 1
+- bytestring >= 0.10
+- filepath >= 1.4
 
 executables:
   obskura:
