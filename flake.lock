@@ -1,5 +1,21 @@
 {
   "nodes": {
+    "elm-i18next-gen": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1608324277,
+        "narHash": "sha256-RBBTJA3sEpI5nIqhifDZGldUnVvaGK2ZeYqgvccODQ0=",
+        "owner": "yonigibbs",
+        "repo": "elm-i18next-gen",
+        "rev": "cb407c3688c501fcb166bb14c3e102df9fdb7eb3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "yonigibbs",
+        "repo": "elm-i18next-gen",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1634146777,
@@ -17,6 +33,7 @@
     },
     "root": {
       "inputs": {
+        "elm-i18next-gen": "elm-i18next-gen",
         "nixpkgs": "nixpkgs"
       }
     }

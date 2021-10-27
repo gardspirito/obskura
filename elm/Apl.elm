@@ -1,16 +1,20 @@
-module App exposing (..)
+module Apl exposing (..)
 
 import Browser
 import Browser.Navigation as Nav
 import Url
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Maybe
 
-type Super = Sxargad | 
+type Super = Sxargad
 
 type alias Model = {
-    sxlos : Nav.Key
+    sxlos : Nav.Key,
+    nunaAgo : Maybe NunaAgo
   }
+
+type NunaAgo = Auxtent
 
 type Mes = Mes
 
@@ -43,11 +47,21 @@ subscriptions arg1 =
     Debug.todo "TODO"
 
 init : () -> Url.Url -> Nav.Key -> (Model, Cmd Mes)
-init _ _ sxlos = ({ sxlos = sxlos }, Cmd.none)
+init _ _ sxlos = ({ sxlos = sxlos, nunaAgo = Just Auxtent }, Cmd.none)
 
 view : Model -> Browser.Document Mes
-view _ =
+view model =
   {
     title = "Testpaĝo",
-    body = [text "bla"]
+    body = [
+      text "bla",
+      text "yes"
+    ] ++ (Maybe.withDefault [] <| Maybe.map montrAgo model.nunaAgo)
   }
+
+montrAgo _ = List.singleton <| div [class "supernivelo"] [
+    div [class "auxtent"] [
+      h1 [] [text "Войти?"]
+    ]
+  ]
+

@@ -2,3 +2,4 @@
 elm-stuff
 client_session_key.aes
 stat/*.js
+elm/Lingvar.elm

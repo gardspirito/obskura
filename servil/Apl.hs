@@ -21,10 +21,11 @@ import Database.MongoDB.Connection
 import Database.Persist
 import Database.Persist.MongoDB
 import Database.Persist.TH
+import Datum
 import Language.Haskell.TH (Type(..))
+import Lingvar
 import qualified System.FilePath as FilePath
 import Yesod
-import qualified Yesod as YesCont
 import qualified Yesod.Core.Content as YesCont
 
 share
@@ -50,12 +51,16 @@ instance PathPiece DosierPeto where
 mkYesod
   "Servil"
   [parseRoutes|
-/#DosierPeto DosierP GET
+/lingvar Lingvar GET
+!/#DosierPeto DosierP GET
 |]
 
--- /#DosierPeto DosierP GET
 instance Yesod Servil
 
+getLingvar :: Handler TypedContent
+getLingvar = lingvar
+
+-- /#DosierPeto DosierP GET
 sufAlTip :: DosierPeto -> ContentType
 sufAlTip = f' . dosFin
   where
@@ -67,6 +72,7 @@ sufAlTip = f' . dosFin
     f' "svg" = YesCont.typeSvg
     f' "js" = YesCont.typeJavascript
     f' "css" = YesCont.typeCss
+    f' "json" = YesCont.typeJson
     f' x
       | x `elem` ["oft", "ttf", "woff", "woff2"] =
         ByteString.concat ["font/", TextEnc.encodeUtf8 x]
@@ -79,11 +85,9 @@ statVoj =
   where
     purF x = x /= "../" && x /= "./"
 
-getDosierP :: DosierPeto -> Handler TypedContent
-getDosierP peto = sendFile (sufAlTip peto) $ statVoj $ Text.unpack $ dosPlenNomo peto
-
-newtype Servil =
-  Servil ConnectionPool
+getDosierP :: DosierPeto -> Handler ()
+getDosierP peto =
+  sendFile (sufAlTip peto) $ statVoj $ Text.unpack $ dosPlenNomo peto
 
 main :: IO ()
 main = do
@@ -96,4 +100,5 @@ main = do
       defaultPoolStripes
       defaultStripeConnections
       defaultConnectionIdleTime
-  warp 3000 $ Servil mongo
+  mankoj <- legMankojn
+  warp 3000 $ Servil {konekt = mongo, lingvMankoj = mankoj}

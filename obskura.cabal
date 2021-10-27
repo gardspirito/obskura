@@ -18,16 +18,21 @@ source-repository head
   location: https://github.com/githubuser/gardspirito
 
 executable obskura
-  main-is: App.hs
+  main-is: Apl.hs
   other-modules:
+      Datum
+      Lingvar
       Paths_obskura
   hs-source-dirs:
-      app
+      servil
   ghc-options: -O2 -fllvm -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4
+    , bifunctors >=5.5
     , bytestring >=0.10
+    , containers >=0.6
     , filepath >=1.4
+    , json >=0.4
     , mongoDB >=2
     , network >=3
     , persistent >=2
