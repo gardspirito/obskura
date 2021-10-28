@@ -43,12 +43,12 @@
               elm-i18next-gen --source lingvar/eo.json --target ./
               sed -i "s/module Translations/module Lingvar/" Translations.elm
               mv Translations.elm elm/Lingvar.elm
-              elm make elm/Apl.elm --output=../stat/kern.js $1
+              elm make elm/Apl.elm --output=stat/kern.js $1
               if [[ $1 = "--optimize" ]]
               then
-                  uglifyjs ../stat/kern.js --compress 'pure_funcs=[F2,F3,F4,F5,F6,F7,F8,F9,A2,A3,A4,A5,A6,A7,A8,A9],pure_getters,keep_fargs=false,unsafe_comps,unsafe' | uglifyjs --mangle --output ../stat/kern.min.js
+                  uglifyjs stat/kern.js --compress 'pure_funcs=[F2,F3,F4,F5,F6,F7,F8,F9,A2,A3,A4,A5,A6,A7,A8,A9],pure_getters,keep_fargs=false,unsafe_comps,unsafe' | uglifyjs --mangle --output stat/kern.min.js
               else
-                  cp ../stat/kern.js ../stat/kern.min.js
+                  cp stat/kern.js stat/kern.min.js
               fi
             '')
           ];
