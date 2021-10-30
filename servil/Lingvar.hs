@@ -2,6 +2,8 @@
 
 module Lingvar where
 
+import Control.Applicative
+import Control.Monad
 import Data.Biapplicative
 import Data.Bifunctor
 import Data.Foldable
@@ -16,7 +18,7 @@ import Text.Printf
 import Yesod.Core
 import Yesod.Core.Content (typeJson)
 
-jsLeg :: JSON a => String -> IO (Maybe a)
+jsLeg :: JSON a => FilePath -> IO (Maybe a)
 jsLeg dosNomo = do
   d <- readFile dosNomo
   case decode d of
@@ -25,49 +27,49 @@ jsLeg dosNomo = do
       putStrLn $ printf "Eraro dum mafermado de %s: %s" dosNomo er
       pure Nothing
 
-legMankojn :: IO Mankoj
+legMankojn :: IO LingvMankoj
 legMankojn =
-  Map.fromList . (map $ second Set.fromList). fromJSObject . fromJust <$> jsLeg "lingvar/mank.json"
+  Map.fromList . map (bimap pack Set.fromList) . fromJSObject . fromJust <$>
+  jsLeg "lingvar/mank.json"
+
+data TradukPet
+  = PetCxio
+  | PetNur (Set.Set Text)
+
+tradukDos :: LingvMankoj -> [Text] -> TradukPet -> [FilePath]
+tradukDos mankMap lingvoj peto =
+  let filtr = pet' (flip Map.lookup mankMap <$> lingvoj) peto
+   in [lingvDos l | (l, f) <- zip (lingvoj ++ ["eo"]) filtr, f]
+  where
+    pet' :: [Maybe (Set.Set Text)] -> TradukPet -> [Bool]
+    pet' _ (PetNur nul)
+      | null nul = []
+    pet' [] _ = [True] -- Apriora lingvo ne inkluzivitas en la liston, sed ĉeestas dum filtrado.
+    pet' (Nothing:ls) peto = False : pet' ls peto
+    pet' ((Just l):ls) PetCxio = True : pet' ls (PetNur l)
+    pet' ((Just l):ls) (PetNur peto) =
+      let komun = l `Set.intersection` peto
+       in (Set.size komun < Set.size peto) : pet' ls (PetNur komun)
+    lingvDos lin = "lingvar/" ++ unpack lin ++ ".json"
+
+ordKun :: Ord a => [(a, v)] -> [(a, v)] -> [(a, v)]
+ordKun (l:ls) (d:ds) =
+  case fst l `compare` fst d of
+    LT -> l : ordKun ls (d : ds)
+    EQ -> l : ordKun ls ds
+    GT -> d : ordKun (l : ls) ds
+ordKun ls ds = ls <|> ds
 
 lingvar :: Traktil TypedContent
 lingvar = do
+  mankMap <- akirLingvMank <$> getYesod
   lingvoj <- languages
-  mankoj <- lingvMankoj <$> getYesod
-  kombinu mankoj (aldonEo lingvoj) Nothing
-  where
-    aldonEo :: [Text] -> [Text]
-    aldonEo [] = ["eo"]
-    aldonEo ls@("eo":_) = ls
-    aldonEo (x:xs) = x : aldonEo xs
-    lingvDos lin = "lingvar/" ++ lin ++ ".json"
-    legLingv :: Text -> IO (Map.Map String Text)
-    legLingv lin =
-      Map.fromList . fromJSObject . fromJust <$>
-      jsLeg (lingvDos $ unpack lin)
-    kombinu mankMap = kombinu'
-      where
-        kombinu' ::
-             [Text]
-          -> Maybe (Set.Set Text, Map.Map String Text)
-          -> Traktil TypedContent
-        kombinu' _ (Just (nulMankas, trdList))
-          | Set.null nulMankas =
-            respond typeJson $
-            encode $
-            toJSObject $ Map.toList trdList
-        kombinu' (x:xs) trad
-          | Just nunMank <- Map.lookup (unpack x) mankMap =
-            case trad of
-              Nothing
-                | Set.null nunMank -> sendFile typeJson $ lingvDos $ unpack x
-              _ -> do
-                novTrdList <- liftIO $ legLingv x
-                kombinu' xs $
-                  Just $
-                  foldr
-                    (\old gxisdat ->
-                       bimap Set.intersection Map.union old <<*>> gxisdat)
-                    (nunMank, novTrdList)
-                    trad
-          | otherwise = kombinu' xs trad
-        kombinu' _ _ = error "Ne trovis tradukon."
+  case tradukDos mankMap lingvoj PetCxio of
+    [] -> error "Ne estas traduko"
+    [unu] -> sendFile typeJson unu
+    multe -> do
+      dosj <- liftIO $ sequence (jsLeg <$> multe)
+      let kun =
+            foldr ordKun [] $ fromJSObject . fromJust <$> dosj :: [( String
+                                                                   , JSValue)]
+      respond typeJson $ encode $ toJSObject kun

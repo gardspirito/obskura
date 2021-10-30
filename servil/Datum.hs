@@ -7,12 +7,12 @@ import Data.Text
 import Database.Persist.MongoDB
 import Yesod.Core
 
-type Mankoj = Map String (Set Text)
+type LingvMankoj = Map Text (Set Text)
 
 data Servil =
   Servil
-    { konekt :: ConnectionPool
-    , lingvMankoj :: Mankoj
+    { akirKonekt :: ConnectionPool
+    , akirLingvMank :: LingvMankoj
     }
 
 type Traktil = HandlerFor Servil

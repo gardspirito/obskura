@@ -101,4 +101,4 @@ main = do
       defaultStripeConnections
       defaultConnectionIdleTime
   mankoj <- legMankojn
-  warp 3000 $ Servil {konekt = mongo, lingvMankoj = mankoj}
+  warp 3000 $ Servil {akirKonekt = mongo, akirLingvMank = mankoj}
