@@ -15,6 +15,7 @@
             stack
             ghc
             elmPackages.elm
+            elmPackages.elm-format
             haskellPackages.hlint
             haskellPackages.hindent
             nodePackages.uglify-js
@@ -25,6 +26,7 @@
               mank=$(mktemp)
               echo '{' > $mank
               kom=True
+              rm lingvar/mank.json
               for d in lingvar/*.json; do
                 jq 'to_entries | sort | from_entries' $d > $ordejo
                 mv $ordejo $d
@@ -43,6 +45,7 @@
               elm-i18next-gen --source lingvar/eo.json --target ./
               sed -i "s/module Translations/module Lingvar/" Translations.elm
               mv Translations.elm elm/Lingvar.elm
+              elm-format elm --yes
               elm make elm/Apl.elm --output=stat/kern.js $1
               if [[ $1 = "--optimize" ]]
               then

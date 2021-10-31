@@ -1,0 +1,102 @@
+/*#00a779*/
+
+body {
+    margin: 0;
+    --gxen-kolor: #1F7D63;
+}
+
+#supr {
+    height: 2.5em;
+    padding-right: 0.5em;
+    background: var(--gxen-kolor);
+    color: white;
+    font-size: 1.25em;
+}
+
+#uzant {
+    float: right;
+    width: 2.5em;
+    height: 2.5em;
+    position: relative;
+}
+
+#uzant-menu {
+    position: absolute;
+    top: 3.25em;
+    right: 0;
+    background: var(--gxen-kolor);
+    width: max-content;
+    border-radius: 5px;
+    padding: 1em;
+    text-align: center;
+}
+
+#uzant-menu input {
+    display: block;
+    border: transparent;
+    background: #ffffff18;
+    margin-top: 0.5em;
+    color: white;
+    font-size: 1em;
+    text-align: center;
+    border-radius: 2px;
+}
+
+#uzant-menu::before {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    right: 10px;
+    width: 3px;
+    height: 0;
+    border: 0.5em solid transparent;
+    border-bottom-color: var(--gxen-kolor);
+}
+
+#uzant-menu .erar {
+    position: absolute;
+    top:100%;
+    margin-top: -5px;
+    background-color: #ED002F;
+    left: 0;
+    right: 0;
+    border-radius: 0 0 5px 5px;
+}
+
+#uzant-menu button {
+    width: 80%;
+    margin-top: 0.5em;
+    font-size: 1em;
+    border: none;
+    color: inherit;
+    background: #FF9C0055;
+    border-bottom: 2px solid #FF9C00;
+    border-radius: 0 0 3px 3px;
+}
+
+/*#supernivelo {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    pointer-events: all;
+    background: #fff4;
+}
+
+#auxtent-super {
+    display: flex;
+    flex-direction: column;
+    justify-content: end;
+}
+
+#auxtent {
+    margin-bottom: 1em;
+    background: white;
+    border-radius: 5px;
+    box-shadow: 0 0px 5px 1px #0006;
+    padding: 1.5em 3em;
+}*/
