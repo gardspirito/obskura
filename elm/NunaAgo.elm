@@ -9,27 +9,18 @@ import I18Next exposing (Translations)
 import Json.Decode as D
 import Lingvar as L
 import Maybe exposing (andThen)
+import Mesagxoj exposing (Msg(..), NAAuxMsg(..), NunaAgoMsg(..))
 import Set exposing (member)
 import String exposing (all, filter, length, split, toLower)
 
 
-nePropaguKlak : (Msg -> msg) -> Attribute msg
-nePropaguKlak f =
-    stopPropagationOn "click" (D.succeed ( f Nul, True ))
+nePropaguKlak : Attribute Msg
+nePropaguKlak =
+    stopPropagationOn "click" (D.succeed ( Nul, True ))
 
 
 type Model
     = AuxMod { adr : String, erar : String, respAtend : Bool }
-
-
-type Msg
-    = AuxMsg AuxMsg
-    | Nul
-
-
-type AuxMsg
-    = Adr String
-    | Ensalutu
 
 
 cxuRompebla : Model -> Bool
@@ -37,19 +28,16 @@ cxuRompebla (AuxMod { respAtend }) =
     not respAtend
 
 
-gxis : (Msg -> msg) -> Msg -> Model -> ( Model, Cmd msg )
-gxis kunt msg mod =
+gxis : NunaAgoMsg -> Model -> ( Model, Cmd Msg )
+gxis msg mod =
     case ( msg, mod ) of
         ( AuxMsg auxMsg, AuxMod auxMod ) ->
             case auxMsg of
-                Adr adr ->
+                AuxAdr adr ->
                     ( AuxMod { auxMod | adr = modifAdr auxMod.adr adr }, Cmd.none )
 
-                Ensalutu ->
-                    ( AuxMod { auxMod | respAtend = True }, ensalutOrdon kunt auxMod.adr )
-
-        ( Nul, _ ) ->
-            ( mod, Cmd.none )
+                AuxEnsalutu ->
+                    ( AuxMod { auxMod | respAtend = True }, ensalutOrdon auxMod.adr )
 
 
 adrPerm : Set.Set Char
@@ -83,7 +71,7 @@ cxuVeraAdr adr =
             False
 
 
-ensalutOrdon kunt adr =
+ensalutOrdon adr =
     Http.post
         { url = "/api/ensalutu"
         , body =
@@ -93,7 +81,7 @@ ensalutOrdon kunt adr =
         , expect =
             Http.expectStringResponse
                 (\r ->
-                    kunt Nul
+                    Nul
                 )
                 (\resp ->
                     case resp of
@@ -117,8 +105,8 @@ cxuSxercist adr l =
     L.auxJamvidis l == adr
 
 
-montrUzantMenu : { a | nunaAgo : Maybe Model, l : Translations } -> (Msg -> msg) -> List (Html msg)
-montrUzantMenu m kunt =
+montrUzantMenu : { a | nunaAgo : Maybe Model, l : Translations } -> List (Html Mesagxoj.Msg)
+montrUzantMenu m =
     case m.nunaAgo of
         Nothing ->
             []
@@ -135,19 +123,19 @@ montrUzantMenu m kunt =
                     else
                         erar
             in
-            [ div [ id "uzant-menu", nePropaguKlak kunt ]
+            [ div [ id "uzant-menu", nePropaguKlak ]
                 ([ text <| L.auxAuxtentigxo m.l
                  , input
                     [ type_ "text"
                     , placeholder <| L.auxRetposxt m.l
                     , disabled respAtend
                     , value adr
-                    , onInput (kunt << AuxMsg << Adr)
+                    , onInput (Mesagxoj.NunaAgoMsg << AuxMsg << AuxAdr)
                     ]
                     []
                  , button
                     [ disabled <| sxerc || (not <| cxuVeraAdr adr)
-                    , onClick (kunt <| AuxMsg Ensalutu)
+                    , onClick (Mesagxoj.NunaAgoMsg <| AuxMsg AuxEnsalutu)
                     ]
                     [ text <| L.auxEnsalutu m.l ]
                  ]

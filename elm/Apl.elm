@@ -11,6 +11,7 @@ import Json.Encode
 import Konservejo exposing (..)
 import Lingvar as L
 import Maybe
+import Mesagxoj exposing (Malferm(..), Msg(..), NAAuxMsg(..), NunaAgoMsg(..))
 import NunaAgo
 import Tuple exposing (mapFirst)
 import Url
@@ -55,24 +56,13 @@ type alias Model =
     }
 
 
-type Msg
-    = NunaAgoMsg NunaAgo.Msg
-    | Malferm Malferm
-    | Akir ( String, String )
-
-
-type Malferm
-    = Ferm
-    | MalfermUzMenu
-
-
 akirAlMsg : Msg -> Msg
 akirAlMsg msg =
     case msg of
         Akir ( nom, val ) ->
             case nom of
                 "retposxt" ->
-                    NunaAgoMsg <| NunaAgo.AuxMsg <| NunaAgo.Adr val
+                    NunaAgoMsg <| AuxMsg <| AuxAdr val
 
                 _ ->
                     msg
@@ -87,7 +77,7 @@ update msg_ model_ =
         ( NunaAgoMsg msg, { nunaAgo } ) ->
             case nunaAgo of
                 Just m ->
-                    mapFirst (\x -> { model_ | nunaAgo = Just x }) <| NunaAgo.gxis NunaAgoMsg msg m
+                    mapFirst (\x -> { model_ | nunaAgo = Just x }) <| NunaAgo.gxis msg m
 
                 Nothing ->
                     ( model_, Cmd.none )
@@ -142,7 +132,7 @@ view model =
                     [ id "uzant"
                     , onClick (Malferm MalfermUzMenu)
                     ]
-                    (NunaAgo.montrUzantMenu model NunaAgoMsg)
+                    (NunaAgo.montrUzantMenu model)
                 ]
             , div [] lorem
             ]
