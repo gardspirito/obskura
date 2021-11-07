@@ -4,9 +4,11 @@ import Browser
 import Browser.Navigation as Nav
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events exposing (onClick)
 import I18Next exposing (Translations, translationsDecoder)
 import Json.Decode
 import Json.Encode
+import Konservejo exposing (..)
 import Lingvar as L
 import Maybe
 import NunaAgo
@@ -30,7 +32,7 @@ init : Json.Encode.Value -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init en _ sxlos =
     case Json.Decode.decodeValue translationsDecoder en of
         Ok tr ->
-            ( { sxlos = sxlos, l = tr, nunaAgo = Just <| NunaAgo.AuxMod { adr = "", erar = "" } }, Cmd.none )
+            ( { sxlos = sxlos, l = tr, nunaAgo = Nothing }, Cmd.none )
 
         Err _ ->
             Debug.todo "Eraro dum ŝaltado."
@@ -55,33 +57,95 @@ type alias Model =
 
 type Msg
     = NunaAgoMsg NunaAgo.Msg
+    | Malferm Malferm
+    | Akir ( String, String )
+
+
+type Malferm
+    = Ferm
+    | MalfermUzMenu
+
+
+akirAlMsg : Msg -> Msg
+akirAlMsg msg =
+    case msg of
+        Akir ( nom, val ) ->
+            case nom of
+                "retposxt" ->
+                    NunaAgoMsg <| NunaAgo.AuxMsg <| NunaAgo.Adr val
+
+                _ ->
+                    msg
+
+        _ ->
+            msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg_ model_ =
-    case ( msg_, model_ ) of
+    case ( akirAlMsg msg_, model_ ) of
         ( NunaAgoMsg msg, { nunaAgo } ) ->
             case nunaAgo of
                 Just m ->
-                    mapFirst (\x -> { model_ | nunaAgo = Just x }) <| NunaAgo.gxis msg m
+                    mapFirst (\x -> { model_ | nunaAgo = Just x }) <| NunaAgo.gxis NunaAgoMsg msg m
 
                 Nothing ->
                     ( model_, Cmd.none )
 
+        ( Malferm mf, { nunaAgo } ) ->
+            case ( mf, nunaAgo ) of
+                ( MalfermUzMenu, Just (NunaAgo.AuxMod _) ) ->
+                    ( model_, Cmd.none )
+
+                ( MalfermUzMenu, mortant ) ->
+                    ( { model_ | nunaAgo = Just <| NunaAgo.AuxMod { adr = "", erar = "", respAtend = False } }, Cmd.batch [ mortSignal mortant, akiru "retposxt" ] )
+
+                ( Ferm, mortant ) ->
+                    ( { model_ | nunaAgo = Nothing }, mortSignal mortant )
+
+        _ ->
+            ( model_, Cmd.none )
+
+
+mortSignal : Maybe NunaAgo.Model -> Cmd Msg
+mortSignal en =
+    case en of
+        Just (NunaAgo.AuxMod { adr }) ->
+            konservu ( "retposxt", adr )
+
+        Nothing ->
+            Cmd.none
+
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    akirejo Akir
+
+
+rompNunanAgon : Model -> List (Attribute Msg)
+rompNunanAgon model =
+    case model.nunaAgo |> Maybe.map NunaAgo.cxuRompebla of
+        Just True ->
+            [ onClick (Malferm Ferm) ]
+
+        _ ->
+            []
 
 
 view : Model -> Browser.Document Msg
 view model =
     { title = "Testpaĝo"
     , body =
-        [ div [ id "supr" ]
-            [ div [ id "uzant" ] (NunaAgo.montrUzantMenu model NunaAgoMsg)
+        [ div (rompNunanAgon model)
+            [ div [ id "supr" ]
+                [ div
+                    [ id "uzant"
+                    , onClick (Malferm MalfermUzMenu)
+                    ]
+                    (NunaAgo.montrUzantMenu model NunaAgoMsg)
+                ]
+            , div [] lorem
             ]
-        , div [] lorem
         ]
     }
 
