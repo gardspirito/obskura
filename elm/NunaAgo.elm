@@ -7,8 +7,10 @@ import Html.Events exposing (onClick, onInput, stopPropagationOn)
 import Http
 import I18Next exposing (Translations)
 import Json.Decode as D
+import Json.Encode
+import Konservejo exposing (konservu)
 import Lingvar as L
-import Maybe exposing (andThen)
+import Maybe exposing (andThen, withDefault)
 import Mesagxoj exposing (Msg(..), NAAuxMsg(..), NunaAgoMsg(..))
 import Set exposing (member)
 import String exposing (all, filter, length, split, toLower)
@@ -16,16 +18,26 @@ import String exposing (all, filter, length, split, toLower)
 
 nePropaguKlak : Attribute Msg
 nePropaguKlak =
-    stopPropagationOn "click" (D.succeed ( Nul, True ))
+    stopPropagationOn "click" (D.succeed ( NulMsg, True ))
 
 
 type Model
     = AuxMod { adr : String, erar : String, respAtend : Bool }
+    | AuxSukc String
+
+
+type alias Retposxt =
+    ( String, String )
 
 
 cxuRompebla : Model -> Bool
-cxuRompebla (AuxMod { respAtend }) =
-    not respAtend
+cxuRompebla mod =
+    case mod of
+        AuxMod { respAtend } ->
+            not respAtend
+
+        AuxSukc _ ->
+            True
 
 
 gxis : NunaAgoMsg -> Model -> ( Model, Cmd Msg )
@@ -38,6 +50,15 @@ gxis msg mod =
 
                 AuxEnsalutu ->
                     ( AuxMod { auxMod | respAtend = True }, ensalutOrdon auxMod.adr )
+
+                AuxEnsalutRes (Ok ()) ->
+                    ( AuxSukc (auxMod.adr |> split "@" |> fromList |> get 1 |> withDefault ""), konservu ( "retposxt", auxMod.adr ) )
+
+                AuxEnsalutRes (Err erar) ->
+                    ( AuxMod { auxMod | erar = erar }, Cmd.none )
+
+        _ ->
+            ( mod, Cmd.none )
 
 
 adrPerm : Set.Set Char
@@ -61,8 +82,8 @@ modifAdr ant nun_ =
 cxuVeraAdr : String -> Bool
 cxuVeraAdr adr =
     case
-        (get 1 <| fromList <| split "@" adr)
-            |> andThen (get 1 << fromList << split ".")
+        (split "@" adr |> fromList |> get 1)
+            |> andThen (split "." >> fromList >> get 1)
     of
         Just x ->
             length x >= 2
@@ -80,9 +101,7 @@ ensalutOrdon adr =
                 ]
         , expect =
             Http.expectStringResponse
-                (\r ->
-                    Nul
-                )
+                (NunaAgoMsg << AuxMsg << AuxEnsalutRes)
                 (\resp ->
                     case resp of
                         Http.GoodStatus_ _ _ ->
@@ -111,39 +130,51 @@ montrUzantMenu m =
         Nothing ->
             []
 
-        Just (AuxMod { adr, erar, respAtend }) ->
-            let
-                sxerc =
-                    adr == L.auxRetposxt m.l
+        Just mod ->
+            [ div [ id "uzant-menu", nePropaguKlak ] <|
+                case mod of
+                    AuxMod { adr, erar, respAtend } ->
+                        let
+                            sxerc =
+                                adr == L.auxRetposxt m.l
 
-                erarTekst =
-                    if sxerc then
-                        L.auxJamvidis m.l
+                            erarTekst =
+                                if sxerc then
+                                    L.auxJamvidis m.l
 
-                    else
-                        erar
-            in
-            [ div [ id "uzant-menu", nePropaguKlak ]
-                ([ text <| L.auxAuxtentigxo m.l
-                 , input
-                    [ type_ "text"
-                    , placeholder <| L.auxRetposxt m.l
-                    , disabled respAtend
-                    , value adr
-                    , onInput (Mesagxoj.NunaAgoMsg << AuxMsg << AuxAdr)
-                    ]
-                    []
-                 , button
-                    [ disabled <| sxerc || (not <| cxuVeraAdr adr)
-                    , onClick (Mesagxoj.NunaAgoMsg <| AuxMsg AuxEnsalutu)
-                    ]
-                    [ text <| L.auxEnsalutu m.l ]
-                 ]
-                    ++ (if erarTekst /= "" then
-                            [ div [ class "erar" ] [ text erarTekst ] ]
-
-                        else
+                                else
+                                    erar
+                        in
+                        [ text <| L.auxAuxtentigxo m.l
+                        , input
+                            [ type_ "text"
+                            , placeholder <| L.auxRetposxt m.l
+                            , disabled respAtend
+                            , value adr
+                            , onInput (Mesagxoj.NunaAgoMsg << AuxMsg << AuxAdr)
+                            ]
                             []
-                       )
-                )
+                        , button
+                            [ disabled <| sxerc || (not <| cxuVeraAdr adr)
+                            , onClick (Mesagxoj.NunaAgoMsg <| AuxMsg AuxEnsalutu)
+                            ]
+                            [ text <| L.auxEnsalutu m.l ]
+                        ]
+                            ++ (if erarTekst /= "" then
+                                    [ div [ class "erar" ] [ text erarTekst ] ]
+
+                                else
+                                    []
+                               )
+
+                    AuxSukc _ ->
+                        [ node "svg" [] [ div [ property "innerHTML" <| Json.Encode.string signSukc ] [] ]
+                        ]
             ]
+
+
+signSukc : String
+signSukc =
+    """
+  <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
+  """

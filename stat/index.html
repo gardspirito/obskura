@@ -16,7 +16,9 @@
       });
 
       apl.ports.akiru.subscribe(msg => {
-        apl.ports.akirejo.send([msg, localStorage.getItem(msg)]);
+        let ajxo = localStorage.getItem(msg);
+        if (ajxo != null)
+          apl.ports.akirejo.send([msg, ajxo]);
       })
     });
   </script>

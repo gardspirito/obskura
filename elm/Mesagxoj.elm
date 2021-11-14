@@ -5,7 +5,7 @@ type Msg
     = NunaAgoMsg NunaAgoMsg
     | Malferm Malferm
     | Akir ( String, String )
-    | Nul
+    | NulMsg
 
 
 type Malferm
@@ -20,3 +20,4 @@ type NunaAgoMsg
 type NAAuxMsg
     = AuxAdr String
     | AuxEnsalutu
+    | AuxEnsalutRes (Result String ())

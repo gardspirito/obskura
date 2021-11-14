@@ -20,25 +20,30 @@ source-repository head
 executable obskura
   main-is: Apl.hs
   other-modules:
+      Auxtent
       Datum
       Lingvar
       Paths_obskura
   hs-source-dirs:
       servil
-  ghc-options: -O2 -fllvm -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall -Wno-name-shadowing -Wno-orphans -O2 -fllvm -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4
-    , bifunctors >=5.5
+    , bifunctors >=5
     , bytestring >=0.10
     , containers >=0.6
+    , dns >=4
     , filepath >=1.4
     , json >=0.4
+    , mime-mail >=0.5
     , mongoDB >=2
     , network >=3
     , persistent >=2
     , persistent-mongoDB >=2
     , template-haskell >=2
     , text >=1
+    , which >=0.2
     , yesod >=1
     , yesod-core >=1
+    , yesod-form >=1
   default-language: Haskell2010

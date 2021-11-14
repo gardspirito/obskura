@@ -17,6 +17,11 @@ import Tuple exposing (mapFirst)
 import Url
 
 
+
+-- FARENDE: Ĉu ne uzu localStorage por konvservado de uzanta retpoŝto?
+-- Ĝi ĉiuokaze estas konservata far la krozilo.
+
+
 main : Program Json.Encode.Value Model Msg
 main =
     Browser.application
@@ -102,6 +107,9 @@ mortSignal en =
     case en of
         Just (NunaAgo.AuxMod { adr }) ->
             konservu ( "retposxt", adr )
+
+        Just (NunaAgo.AuxSukc _) ->
+            Cmd.none
 
         Nothing ->
             Cmd.none

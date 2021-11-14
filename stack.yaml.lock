@@ -5,16 +5,16 @@
 
 packages:
 - completed:
-    hackage: persistent-mongoDB-2.13.0.0@sha256:66b9fcd3d3084068653e3898db867e5f49c4ff3a6040d595d549c52877220db5,2744
+    hackage: which-0.2@sha256:db82ca7d83d64cce8ad579756f02d27c5bd289806ee02474726f7fafb87318e8,858
     pantry-tree:
-      size: 593
-      sha256: 5ae7b1ac51a0b083934193a6d01eea132adfe038b007afc992af7499432dcca7
+      size: 262
+      sha256: bef8458bddea924f3162e51fcef66cb3071f73c31d3dbb6d4029b0115af88a54
   original:
-    hackage: persistent-mongoDB-2.13.0.0@sha256:66b9fcd3d3084068653e3898db867e5f49c4ff3a6040d595d549c52877220db5,2744
+    hackage: which-0.2@sha256:db82ca7d83d64cce8ad579756f02d27c5bd289806ee02474726f7fafb87318e8,858
 snapshots:
 - completed:
-    size: 586041
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/12.yaml
-    sha256: 80fc6391195ff00c36f2a605ecbb07de909bfaa2eaa9722a27e486a6ecf8ecb0
+    size: 596812
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2021/11/19.yaml
+    sha256: d4ebfabe1a2cc08a1521073ab0c9fd00036350518bfdd148ea7316690f39504d
   original:
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/12.yaml
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2021/11/19.yaml

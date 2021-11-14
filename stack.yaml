@@ -1,14 +1,15 @@
 resolver:
-  url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/12.yaml
+  url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/nightly/2021/11/19.yaml
 
 packages:
 - .
 
-system-ghc: true
+allow-newer: true
 
 nix:
   enable: true
+  pure: false
   packages: [zlib, llvmPackages_12.llvm]
 
 extra-deps:
-- persistent-mongoDB-2.13.0.0@sha256:66b9fcd3d3084068653e3898db867e5f49c4ff3a6040d595d549c52877220db5,2744
+- which-0.2@sha256:db82ca7d83d64cce8ad579756f02d27c5bd289806ee02474726f7fafb87318e8,858

@@ -11,6 +11,7 @@ dependencies:
 - network >= 3
 - yesod >= 1
 - yesod-core >= 1
+- yesod-form >= 1
 - persistent >= 2
 - persistent-mongoDB >= 2
 - mongoDB >= 2
@@ -19,17 +20,21 @@ dependencies:
 - filepath >= 1.4
 - json >= 0.4
 - containers >= 0.6
-- bifunctors >= 5.5
+- bifunctors >= 5
+- dns >= 4
+- mime-mail >= 0.5
+- which >= 0.2
 
 executables:
   obskura:
     main:                Apl.hs
     source-dirs:         servil
     ghc-options:
+    - -Wall
+    - -Wno-name-shadowing
+    - -Wno-orphans
     - -O2
     - -fllvm
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
-    #dependencies:
-    #- ne

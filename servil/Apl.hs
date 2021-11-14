@@ -12,6 +12,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
+import Auxtent
 import qualified Data.ByteString as ByteString
 import Data.Function
 import Data.Maybe
@@ -24,10 +25,14 @@ import Database.Persist.TH
 import Datum
 import Language.Haskell.TH (Type(..))
 import Lingvar
+import Network.DNS
+import Network.Mail.Mime
 import qualified System.FilePath as FilePath
+import System.Which
 import Yesod
 import qualified Yesod.Core.Content as YesCont
 
+-- FARENDE: Agordaro por retpoŝtadreso de sendanto.
 share
   [mkPersist (mkPersistSettings (ConT ''MongoContext))]
   [persistLowerCase|
@@ -52,6 +57,7 @@ mkYesod
   "Servil"
   [parseRoutes|
 /lingvar Lingvar GET
+/api/ensalutu Auxtent POST
 !/#DosierPeto DosierP GET
 |]
 
@@ -89,6 +95,22 @@ getDosierP :: DosierPeto -> Handler ()
 getDosierP peto =
   sendFile (sufAlTip peto) $ statVoj $ Text.unpack $ dosPlenNomo peto
 
+kreuDNSSem :: IO ResolvSeed
+kreuDNSSem = makeResolvSeed defaultResolvConf {resolvTimeout = 1000000}
+
+posxtu' :: IO ((Mail -> Mail) -> IO ())
+posxtu' = do
+  sm <- fromJust <$> which "sendmail"
+  return $ \kreilo ->
+    sendmailCustom sm ["-t"] =<<
+    renderMail'
+      (kreilo $
+       emptyMail
+         Address
+           { addressName = Just "Obskurativ"
+           , addressEmail = "obs@dev.obscurative.ru"
+           })
+
 main :: IO ()
 main = do
   mongo <-
@@ -101,4 +123,12 @@ main = do
       defaultStripeConnections
       defaultConnectionIdleTime
   mankoj <- legMankojn
-  warp 3000 $ Servil {akirKonekt = mongo, akirLingvMank = mankoj}
+  sem <- kreuDNSSem
+  posxtu <- posxtu'
+  warp 3000 $
+    Servil
+      { akirKonekt = mongo
+      , akirLingvMank = mankoj
+      , akirDNSSem = sem
+      , posxtu = posxtu
+      }

@@ -13,13 +13,13 @@
           nativeBuildInputs = [
             mongodb
             stack
-            ghc
             elmPackages.elm
             elmPackages.elm-format
             haskellPackages.hlint
             haskellPackages.hindent
             nodePackages.uglify-js
             jq
+            (pkgs.writeShellScriptBin "sendmail" "cat")
             ((import "${self}/.nix/elm-i18next-gen/default.nix" {pkgs = nixpkgs.legacyPackages.${sis};}).elm-i18next-gen)
             (pkgs.writeShellScriptBin "fackon" ''
               ordejo=$(mktemp)
