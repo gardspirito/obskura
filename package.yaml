@@ -31,8 +31,6 @@ executables:
     source-dirs:         servil
     ghc-options:
     - -Wall
-    - -Wno-name-shadowing
-    - -Wno-orphans
     - -O2
     - -fllvm
     - -threaded

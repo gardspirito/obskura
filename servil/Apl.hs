@@ -11,15 +11,14 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-orphans -Wno-unused-top-binds #-}
 
 import Auxtent
 import qualified Data.ByteString as ByteString
-import Data.Function
 import Data.Maybe
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as TextEnc
 import Database.MongoDB.Connection
-import Database.Persist
 import Database.Persist.MongoDB
 import Database.Persist.TH
 import Datum
@@ -84,6 +83,7 @@ sufAlTip = f' . dosFin
         ByteString.concat ["font/", TextEnc.encodeUtf8 x]
     f' _ = YesCont.typeOctet
 
+statVoj :: [Char] -> FilePath
 statVoj =
   FilePath.joinPath .
   ("stat/" :) .
@@ -98,8 +98,8 @@ getDosierP peto =
 kreuDNSSem :: IO ResolvSeed
 kreuDNSSem = makeResolvSeed defaultResolvConf {resolvTimeout = 1000000}
 
-posxtu' :: IO ((Mail -> Mail) -> IO ())
-posxtu' = do
+kreuPosxtilo :: IO ((Mail -> Mail) -> IO ())
+kreuPosxtilo = do
   sm <- fromJust <$> which "sendmail"
   return $ \kreilo ->
     sendmailCustom sm ["-t"] =<<
@@ -124,11 +124,11 @@ main = do
       defaultConnectionIdleTime
   mankoj <- legMankojn
   sem <- kreuDNSSem
-  posxtu <- posxtu'
+  posxtilo <- kreuPosxtilo
   warp 3000 $
     Servil
       { akirKonekt = mongo
       , akirLingvMank = mankoj
       , akirDNSSem = sem
-      , posxtu = posxtu
+      , posxtu = posxtilo
       }

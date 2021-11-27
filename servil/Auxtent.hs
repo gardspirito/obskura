@@ -4,31 +4,30 @@
 module Auxtent where
 
 import Control.Monad
-import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as T
 import Data.Text.Encoding
 import Datum
 import Network.DNS
-import Network.DNS.Lookup
 import Network.Mail.Mime
 import Yesod.Core
 import Yesod.Form
 
-cxuRetposxtEkzist :: ResolvSeed -> Domain -> IO Bool
-cxuRetposxtEkzist sem dom =
+cxuServiloEkzist :: ResolvSeed -> Domain -> IO Bool
+cxuServiloEkzist sem dom =
   withResolver sem $ \r -> do
     m <- lookupMX r dom
-    let cxuValida x = any ((/= ".") . fst) x
-    return $ either (const False) cxuValida m
+    return $ case m of
+      Right x | any ((/= ".") . fst) x -> True
+      _ -> False
 
 postAuxtent :: Traktil TypedContent
 postAuxtent = do
   retposxt <- runInputPost (ireq textField "retposxt")
   domajn <- akirDomajn retposxt
   servil <- getYesod
-  cxuEkz <- liftIO $ cxuRetposxtEkzist (akirDNSSem servil) $ encodeUtf8 domajn
-  unless cxuEkz (invalidArgs ["RETPOSXT_NE_EKZISTAS"])
-    -- FARENDA: Enmetu
+  cxuEkz <- liftIO $ cxuServiloEkzist (akirDNSSem servil) $ encodeUtf8 domajn
+  unless cxuEkz (invalidArgs ["SERVILO_NE_EKZISTAS"])
+  -- Enmetu
   liftIO $
     posxtu
       servil

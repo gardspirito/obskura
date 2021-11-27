@@ -3,20 +3,15 @@
 module Lingvar where
 
 import Control.Applicative
-import Control.Monad
 import Data.Biapplicative
-import Data.Bifunctor
-import Data.Foldable
 import qualified Data.Map as Map
 import Data.Maybe
 import qualified Data.Set as Set
 import Data.Text (Text, pack, unpack)
 import Datum
 import Text.JSON
-import Text.JSON.Types
 import Text.Printf
 import Yesod.Core
-import Yesod.Core.Content (typeJson)
 
 jsLeg :: JSON a => FilePath -> IO (Maybe a)
 jsLeg dosNomo = do
@@ -37,14 +32,14 @@ data TradukPet
   | PetNur (Set.Set Text)
 
 tradukDos :: LingvMankoj -> [Text] -> TradukPet -> [FilePath]
-tradukDos mankMap lingvoj peto =
-  let filtr = pet' (flip Map.lookup mankMap <$> lingvoj) peto
+tradukDos mankMap lingvoj tutaPeto =
+  let filtr = pet' (flip Map.lookup mankMap <$> lingvoj) tutaPeto
    in [lingvDos l | (l, f) <- zip (lingvoj ++ ["eo"]) filtr, f]
   where
     pet' :: [Maybe (Set.Set Text)] -> TradukPet -> [Bool]
     pet' _ (PetNur nul)
       | null nul = []
-    pet' [] _ = [True] -- Apriora lingvo ne inkluzivitas en la liston, sed ĉeestas dum filtrado.
+    pet' [] _ = [True] -- Uzu aprioran lingvon
     pet' (Nothing:ls) peto = False : pet' ls peto
     pet' ((Just l):ls) PetCxio = True : pet' ls (PetNur l)
     pet' ((Just l):ls) (PetNur peto) =
