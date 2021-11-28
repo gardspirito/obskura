@@ -60,7 +60,9 @@ mkYesod
 !/#DosierPeto DosierP GET
 |]
 
-instance Yesod Servil
+instance Yesod Servil where
+  errorHandler (InvalidArgs x) = respond YesCont.typePlain $ Text.intercalate " " x
+  errorHandler aux = defaultErrorHandler aux
 
 getLingvar :: Handler TypedContent
 getLingvar = lingvar

@@ -1,8 +1,10 @@
 {
   "aux.auxtentigxo": "Ensaluto per retpoŝto",
   "aux.ensalutu": "Ensalutu!",
+  "aux.erar.ne_ekzistas": "Pardonu, sed unu birdeto min pepis, ke ĉi tiu repoŝto tute ne ekzistas",
   "aux.jamvidis": "Ie mi ĉi tion jam vidis... hm...",
   "aux.retposxt": "retposxto@domajno.com",
   "aux.sukceso": "Aŭtentigpeto senditas!\nVi baldaŭ ricevos retmesaĝon.",
-  "aux.vizitu": "Vizitu "
+  "aux.vizitu": "Vizitu ",
+  "erar.konekt": "Ne eblas konekti al la servilo..."
 }

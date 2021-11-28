@@ -49,13 +49,13 @@ gxis msg mod =
                     ( AuxMod { auxMod | adr = modifAdr auxMod.adr adr }, Cmd.none )
 
                 AuxEnsalutu ->
-                    ( AuxMod { auxMod | respAtend = True }, ensalutOrdon auxMod.adr )
+                    ( AuxMod { auxMod | erar = "", respAtend = True }, ensalutOrdon auxMod.adr )
 
                 AuxEnsalutRes (Ok ()) ->
                     ( AuxSukc (auxMod.adr |> split "@" |> fromList |> get 1 |> withDefault ""), konservu ( "retposxt", auxMod.adr ) )
 
                 AuxEnsalutRes (Err erar) ->
-                    ( AuxMod { auxMod | erar = erar }, Cmd.none )
+                    ( AuxMod { auxMod | erar = erar, respAtend = False }, Cmd.none )
 
         _ ->
             ( mod, Cmd.none )
@@ -111,7 +111,7 @@ ensalutOrdon adr =
                             Err erar
 
                         Http.NetworkError_ ->
-                            Debug.todo ""
+                            Err "KONEKT"
 
                         _ ->
                             Debug.todo ""
@@ -122,6 +122,19 @@ ensalutOrdon adr =
 cxuSxercist : String -> Translations -> Bool
 cxuSxercist adr l =
     L.auxJamvidis l == adr
+
+
+montrErar : String -> Translations -> String
+montrErar x l =
+    case x of
+        "SERVILO_NE_EKZISTAS" ->
+            L.auxErarNeEkzistas l
+
+        "KONEKT" ->
+            L.erarKonekt l
+
+        _ ->
+            x
 
 
 montrUzantMenu : { a | nunaAgo : Maybe Model, l : Translations } -> List (Html Mesagxoj.Msg)
@@ -143,7 +156,7 @@ montrUzantMenu m =
                                     L.auxJamvidis m.l
 
                                 else
-                                    erar
+                                    montrErar erar m.l
                         in
                         [ text <| L.auxAuxtentigxo m.l
                         , input
@@ -168,7 +181,7 @@ montrUzantMenu m =
                                )
 
                     AuxSukc _ ->
-                        [ node "svg" [] [ div [ property "innerHTML" <| Json.Encode.string signSukc ] [] ]
+                        [ node "svg" [ id "bla", property "xmlns" <| Json.Encode.string "http://www.w3.org/2000/svg", property "innerHTML" <| Json.Encode.string """<path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>""" ] []
                         ]
             ]
 
