@@ -29,6 +29,8 @@ body {
     border-radius: 5px;
     padding: 1em;
     text-align: center;
+    min-width: 15em;
+    max-width: 100vw;
 }
 
 #uzant-menu input {
@@ -72,6 +74,138 @@ body {
     background: #FF9C0055;
     border-bottom: 2px solid #FF9C00;
     border-radius: 0 0 3px 3px;
+}
+
+#krei-kont button:disabled {
+    opacity: 0.25;
+}
+
+#krei-kont button {
+    width: 80%;
+    font-size: 80%;
+    background: #1F7D63;
+    color: white;
+    border-radius: 10px;
+    border-width: 3px;
+    margin-bottom: 0.25em;
+}
+
+#uzant-menu #sukc-mark {
+    width: 3em;
+}
+
+a {
+    color: #DFAE61;
+}
+
+#krei-uzant-bild {
+    border: 1px solid black;
+    width: 2em;
+    height: 2em;
+    border-radius: 5px;
+    position: relative;
+    cursor: n-resize;
+}
+
+#krei-uzant-bild svg {
+    height: 50%;
+    width: 50%;
+}
+
+#krei-uzant-bild-alsxultit {
+    border: 1px solid black;
+    border-radius: 5px;
+    position: relative;
+    cursor: n-resize;
+    background-position: center;
+    background-size: cover; 
+    background-repeat: no-repeat;
+    width: 6em;
+    height: 6em;
+}
+
+#krei-kont {
+    font-size: 300%;
+}
+
+#krei-kont hr {
+    width: 100%;
+    margin-top: -0.5em;
+    opacity: 0.3;
+}
+
+#krei-kont > .kolumn {
+    border: 1px solid grey;
+    border-radius: 5px;
+    padding: 0.5em;
+    box-shadow: 0 5px 20px 0 #666;
+}
+
+#krei-kont-bonvenon {
+    opacity: 0.8em;
+}
+
+.meze {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.pagx-largxa {
+    height: 100vh;
+}
+  
+.kolumn {
+    display: flex;
+    flex-flow: column nowrap;
+    align-items: center;
+}
+
+.kolumn > * {
+    margin-bottom: 1em;
+}
+
+#krei-kont input {
+    text-align: center;
+}
+
+#krei-kont input, #krei-kont textarea {
+    width: 70%;
+    font-size: 75%;
+	display: block;
+	margin-top: 0.5em;
+	font-size: 1em;
+	border-radius: 0;
+	border: 5px solid transparent;
+	border-bottom: 5px solid #888;
+	border-top: 5px solid #888;
+}
+
+.eta-teksto {
+    font-size: 50%;
+    margin-top: -1.5em;
+    opacity: 0.7;
+}
+
+#krei-uzant-bild-konsileto {
+    position: absolute;
+    top: 100%;
+    font-size: 60%;
+    width: max-content;
+    text-align: center;
+    background: #ddd;
+    border-radius: 3px;
+    padding: 0 0.4em;
+}
+
+#krei-uzant-bild-konsileto::before {
+    content: "";
+    border: 0.8em solid transparent;
+    border-bottom-color: #ddd;
+    left: 50%;
+    margin-left: -0.8em;
+    position: absolute;
+    bottom: 100%;
 }
 
 /*#supernivelo {

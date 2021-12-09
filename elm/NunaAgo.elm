@@ -1,19 +1,20 @@
 module NunaAgo exposing (..)
 
 import Array exposing (fromList, get)
+import Cxies exposing (Msg(..), NAAuxMsg(..), NunaAgoMsg(..))
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, stopPropagationOn)
 import Http
 import I18Next exposing (Translations)
 import Json.Decode as D
-import Json.Encode
 import Konservejo exposing (konservu)
 import Lingvar as L
 import Maybe exposing (andThen, withDefault)
-import Mesagxoj exposing (Msg(..), NAAuxMsg(..), NunaAgoMsg(..))
 import Set exposing (member)
 import String exposing (all, filter, length, split, toLower)
+import Svg exposing (path, svg)
+import Svg.Attributes exposing (d, viewBox)
 
 
 nePropaguKlak : Attribute Msg
@@ -63,7 +64,7 @@ gxis msg mod =
 
 adrPerm : Set.Set Char
 adrPerm =
-    Set.fromList <| String.toList "abcdefghijklmnopqrstuvwxyz0123456789@.-_"
+    Set.fromList <| '@' :: Cxies.ciferKajSimDis
 
 
 modifAdr : String -> String -> String
@@ -137,7 +138,7 @@ montrErar x l =
             x
 
 
-montrUzantMenu : { a | nunaAgo : Maybe Model, l : Translations } -> List (Html Mesagxoj.Msg)
+montrUzantMenu : { a | nunaAgo : Maybe Model, l : Translations } -> List (Html Msg)
 montrUzantMenu m =
     case m.nunaAgo of
         Nothing ->
@@ -164,12 +165,12 @@ montrUzantMenu m =
                             , placeholder <| L.auxRetposxt m.l
                             , disabled respAtend
                             , value adr
-                            , onInput (Mesagxoj.NunaAgoMsg << AuxMsg << AuxAdr)
+                            , onInput (NunaAgoMsg << AuxMsg << AuxAdr)
                             ]
                             []
                         , button
                             [ disabled <| sxerc || (not <| cxuVeraAdr adr)
-                            , onClick (Mesagxoj.NunaAgoMsg <| AuxMsg AuxEnsalutu)
+                            , onClick (NunaAgoMsg <| AuxMsg AuxEnsalutu)
                             ]
                             [ text <| L.auxEnsalutu m.l ]
                         ]
@@ -180,14 +181,22 @@ montrUzantMenu m =
                                     []
                                )
 
-                    AuxSukc _ ->
-                        [ node "svg" [ id "bla", property "xmlns" <| Json.Encode.string "http://www.w3.org/2000/svg", property "innerHTML" <| Json.Encode.string """<path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>""" ] []
+                    AuxSukc celloko ->
+                        [ text <| L.auxSukces1 m.l
+                        , br [] []
+                        , text <| L.auxSukces2 m.l
+                        , br [] []
+                        , signSukc
+                        , br [] []
+                        , text <| L.auxVizitu m.l
+                        , text " "
+                        , a [ href ("https://" ++ celloko) ] [ text celloko ]
                         ]
             ]
 
 
-signSukc : String
+signSukc : Html a
 signSukc =
-    """
-  <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
-  """
+    svg [ viewBox "4 4 8.5 8.5", id "sukc-mark" ]
+        [ path [ d "M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z" ] []
+        ]

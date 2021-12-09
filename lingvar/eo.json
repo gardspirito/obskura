@@ -3,8 +3,15 @@
   "aux.ensalutu": "Ensalutu!",
   "aux.erar.ne_ekzistas": "Pardonu, sed unu birdeto min pepis, ke ĉi tiu repoŝto tute ne ekzistas",
   "aux.jamvidis": "Ie mi ĉi tion jam vidis... hm...",
+  "aux.krei-konton": "Krei konton",
+  "aux.krei-konton.alsxult": "Laŭvole alŝaltu profilbildon",
+  "aux.krei-konton.bonvenon": "Bonvenon Hejmen",
+  "aux.krei-konton.fini": "Komenci vojaĝon",
+  "aux.krei-konton.uzantnomo": "Via uzantnomo",
+  "aux.krei-konton.uzantpri": "Laŭvole rakontu iom pri vi",
   "aux.retposxt": "retposxto@domajno.com",
-  "aux.sukceso": "Aŭtentigpeto senditas!\nVi baldaŭ ricevos retmesaĝon.",
-  "aux.vizitu": "Vizitu ",
+  "aux.sukces1": "Aŭtentigpeto senditas!",
+  "aux.sukces2": "Vi baldaŭ ricevos retmesaĝon.",
+  "aux.vizitu": "Eble vi vizitu",
   "erar.konekt": "Ne eblas konekti al la servilo..."
 }

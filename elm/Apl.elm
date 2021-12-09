@@ -1,7 +1,9 @@
 module Apl exposing (..)
 
-import Browser
+import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
+import Cxies exposing (Malferm(..), Msg(..), NAAuxMsg(..), NunaAgoMsg(..), PagxMsg(..), bildFormatoj)
+import File.Select exposing (file)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick)
@@ -9,9 +11,9 @@ import I18Next exposing (Translations, translationsDecoder)
 import Json.Decode
 import Json.Encode
 import Konservejo exposing (..)
+import Konto
 import Lingvar as L
 import Maybe
-import Mesagxoj exposing (Malferm(..), Msg(..), NAAuxMsg(..), NunaAgoMsg(..))
 import NunaAgo
 import Tuple exposing (mapFirst)
 import Url
@@ -38,68 +40,92 @@ init : Json.Encode.Value -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init en _ sxlos =
     case Json.Decode.decodeValue translationsDecoder en of
         Ok tr ->
-            ( { sxlos = sxlos, l = tr, nunaAgo = Nothing }, Cmd.none )
+            ( { sxlos = sxlos, l = tr, nunaAgo = Nothing, pagx = KontKreiPagx { nomo = "", id = "", uzantbild = Nothing, uzantbildUrl = Nothing, pri = "" } }, Cmd.none )
 
         Err _ ->
             Debug.todo "Eraro dum ŝaltado."
 
 
 onUrlRequest : Browser.UrlRequest -> Msg
-onUrlRequest arg1 =
-    Debug.todo "TODO"
+onUrlRequest =
+    UrlSxan
 
 
 onUrlChange : Url.Url -> Msg
-onUrlChange arg1 =
+onUrlChange _ =
     Debug.todo "TODO"
+
+
+type PagTip
+    = PagxRegula
+    | KontKreiPagx Konto.Model
 
 
 type alias Model =
     { sxlos : Nav.Key
     , l : Translations
     , nunaAgo : Maybe NunaAgo.Model
+    , pagx : PagTip
     }
 
 
-akirAlMsg : Msg -> Msg
-akirAlMsg msg =
-    case msg of
-        Akir ( nom, val ) ->
-            case nom of
-                "retposxt" ->
-                    NunaAgoMsg <| AuxMsg <| AuxAdr val
-
-                _ ->
-                    msg
+akirAlMsg : ( String, String ) -> Msg
+akirAlMsg ( nom, val ) =
+    case nom of
+        "retposxt" ->
+            NunaAgoMsg <| AuxMsg <| AuxAdr val
 
         _ ->
-            msg
+            NulMsg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg_ model_ =
-    case ( akirAlMsg msg_, model_ ) of
-        ( NunaAgoMsg msg, { nunaAgo } ) ->
-            case nunaAgo of
+update msg_ model =
+    case msg_ of
+        NulMsg ->
+            ( model, Cmd.none )
+
+        Akir akir ->
+            update (akirAlMsg akir) model
+
+        NunaAgoMsg msg ->
+            case model.nunaAgo of
                 Just m ->
-                    mapFirst (\x -> { model_ | nunaAgo = Just x }) <| NunaAgo.gxis msg m
+                    mapFirst (\x -> { model | nunaAgo = Just x }) <| NunaAgo.gxis msg m
 
                 Nothing ->
-                    ( model_, Cmd.none )
+                    ( model, Cmd.none )
 
-        ( Malferm mf, { nunaAgo } ) ->
-            case ( mf, nunaAgo ) of
+        PagxMsg (KontKreMsg msg) ->
+            case model.pagx of
+                KontKreiPagx m ->
+                    mapFirst (\x -> { model | pagx = KontKreiPagx x }) <| Konto.gxis msg m
+
+                _ ->
+                    ( model, Cmd.none )
+
+        Malferm mf ->
+            case ( mf, model.nunaAgo ) of
                 ( MalfermUzMenu, Just (NunaAgo.AuxMod _) ) ->
-                    ( model_, Cmd.none )
+                    ( model, Cmd.none )
 
                 ( MalfermUzMenu, mortant ) ->
-                    ( { model_ | nunaAgo = Just <| NunaAgo.AuxMod { adr = "", erar = "", respAtend = False } }, Cmd.batch [ mortSignal mortant, akiru "retposxt" ] )
+                    ( { model | nunaAgo = Just <| NunaAgo.AuxMod { adr = "", erar = "", respAtend = False } }, Cmd.batch [ mortSignal mortant, akiru "retposxt" ] )
 
                 ( Ferm, mortant ) ->
-                    ( { model_ | nunaAgo = Nothing }, mortSignal mortant )
+                    ( { model | nunaAgo = Nothing }, mortSignal mortant )
 
-        _ ->
-            ( model_, Cmd.none )
+        UrlSxan (External url) ->
+            ( model, Nav.load url )
+
+        UrlSxan (Internal _) ->
+            Debug.todo ""
+
+        BildInstal f ->
+            ( model, file bildFormatoj f )
+
+        Pigre f ->
+            update (f ()) model
 
 
 mortSignal : Maybe NunaAgo.Model -> Cmd Msg
@@ -132,20 +158,27 @@ rompNunanAgon model =
 
 view : Model -> Browser.Document Msg
 view model =
-    { title = "Testpaĝo"
-    , body =
-        [ div (rompNunanAgon model)
-            [ div [ id "supr" ]
-                [ div
-                    [ id "uzant"
-                    , onClick (Malferm MalfermUzMenu)
+    case model.pagx of
+        PagxRegula ->
+            { title = "Testpaĝo"
+            , body =
+                [ div (rompNunanAgon model)
+                    [ div [ id "supr" ]
+                        [ div
+                            [ id "uzant"
+                            , onClick (Malferm MalfermUzMenu)
+                            ]
+                            (NunaAgo.montrUzantMenu model)
+                        ]
+                    , div [] lorem
                     ]
-                    (NunaAgo.montrUzantMenu model)
                 ]
-            , div [] lorem
-            ]
-        ]
-    }
+            }
+
+        KontKreiPagx m ->
+            { title = L.auxKreiKonton model.l
+            , body = Konto.montr m model.l
+            }
 
 
 lorem : List (Html a)
