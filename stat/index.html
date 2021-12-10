@@ -20,6 +20,10 @@
         if (ajxo != null)
           apl.ports.akirejo.send([msg, ajxo]);
       })
+
+      apl.ports.raportiErar.subscribe(msg => {
+        console.error(msg);
+      })
     });
   </script>
 </body>

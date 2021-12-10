@@ -2,7 +2,7 @@ module Apl exposing (..)
 
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation as Nav
-import Cxies exposing (Malferm(..), Msg(..), NAAuxMsg(..), NunaAgoMsg(..), PagxMsg(..), bildFormatoj)
+import Cxies exposing (Malferm(..), Msg(..), NAAuxMsg(..), NunaAgoMsg(..), PagxMsg(..), akirejo, akiru, bildFormatoj, konservu)
 import File.Select exposing (file)
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -10,7 +10,6 @@ import Html.Events exposing (onClick)
 import I18Next exposing (Translations, translationsDecoder)
 import Json.Decode
 import Json.Encode
-import Konservejo exposing (..)
 import Konto
 import Lingvar as L
 import Maybe
@@ -40,7 +39,11 @@ init : Json.Encode.Value -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init en _ sxlos =
     case Json.Decode.decodeValue translationsDecoder en of
         Ok tr ->
-            ( { sxlos = sxlos, l = tr, nunaAgo = Nothing, pagx = KontKreiPagx { nomo = "", id = "", uzantbild = Nothing, uzantbildUrl = Nothing, pri = "" } }, Cmd.none )
+            let
+                ( t1, t2 ) =
+                    Konto.komenci
+            in
+            ( { sxlos = sxlos, l = tr, nunaAgo = Nothing, pagx = KontKreiPagx t1 }, t2 )
 
         Err _ ->
             Debug.todo "Eraro dum ŝaltado."

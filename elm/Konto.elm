@@ -1,26 +1,56 @@
 module Konto exposing (..)
 
 import Char exposing (toLower)
-import Cxies exposing (KontKreMsg(..), Msg(..), PagxMsg(..), alfabeto, bildFormatoj, ciferKajSimDis, simDis)
+import Cxies exposing (KontKreMsg(..), Msg(..), PagxMsg(..), alfabeto, atendJson, bildFormatoj, ciferKajSimDis, raportiErar, simDis)
 import Dict exposing (Dict)
 import File exposing (File, mime)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, preventDefaultOn)
+import Http
 import I18Next exposing (Translations)
 import Json.Decode as Decode exposing (field, index)
 import Lingvar as L
 import Platform.Cmd exposing (Cmd)
 import Set exposing (Set)
-import String exposing (length)
+import String exposing (length, uncons)
 import Svg exposing (path, svg)
 import Svg.Attributes exposing (d, viewBox)
 import Task exposing (perform)
-import Tuple exposing (first)
+import Tuple exposing (first, mapFirst, mapSecond)
 
 
 type alias Model =
-    { nomo : String, id : String, uzantbild : Maybe File, uzantbildUrl : Maybe String, pri : String }
+    { nomo : String
+    , id : String
+    , uzantbild : Maybe File
+    , uzantbildUrl : Maybe String
+    , pri : String
+    , latinigVortar : Dict Char String
+    , erar : String
+    }
+
+
+komenci : ( Model, Cmd Msg )
+komenci =
+    ( { nomo = ""
+      , id = ""
+      , uzantbild = Nothing
+      , uzantbildUrl = Nothing
+      , pri = ""
+      , latinigVortar = Dict.fromList []
+      , erar = ""
+      }
+    , Http.get
+        { url = "/uzantid-anst.json"
+        , expect =
+            Http.expectStringResponse
+                (PagxMsg << KontKreMsg << LatinigVort)
+            <|
+                atendJson (Decode.keyValuePairs Decode.string)
+        }
+      -- ripari
+    )
 
 
 gxis : KontKreMsg -> Model -> ( Model, Cmd Msg )
@@ -40,6 +70,41 @@ gxis msg mod =
         UzantPri pri ->
             ( { mod | pri = pri }, Cmd.none )
 
+        LatinigVort rez ->
+            case rez of
+                Err x ->
+                    ( { mod | erar = x }, Cmd.none )
+
+                Ok x ->
+                    mapFirst (\vortar -> { mod | latinigVortar = vortar }) <| listAlVort x
+
+
+listAlVort : List ( String, String ) -> ( Dict Char String, Cmd msg )
+listAlVort list =
+    case list of
+        ( nomo, val ) :: xs ->
+            case uncons nomo of
+                Just ( l, "" ) ->
+                    mapFirst (Dict.insert l val) <| listAlVort xs
+
+                _ ->
+                    let
+                        erar =
+                            "You instructed to replace \"" ++ nomo ++ "\" in user identifiers with \"" ++ val ++ "\". Unfortunately, I'm not capable of multi-character replacements. If you think that you really need this to be possible, open a new issue: https://github.com/gardspirito/obskurativ/issues/new. Thank you!"
+                    in
+                    mapSecond
+                        (\x ->
+                            Cmd.batch
+                                [ x
+                                , raportiErar erar
+                                ]
+                        )
+                    <|
+                        listAlVort xs
+
+        [] ->
+            ( Dict.empty, Cmd.none )
+
 
 nomLim : Int
 nomLim =
@@ -58,21 +123,21 @@ gxisNomon m nom_ =
     else
         { m
             | nomo = nom
-            , id = kreID nom
+            , id = kreID nom m.latinigVortar
         }
 
 
-kreID : String -> String
-kreID x =
+kreID : String -> Dict Char String -> String
+kreID x latinigVortar =
     x
         |> String.toList
-        |> List.concatMap latinigi
+        |> List.concatMap (latinigi latinigVortar)
         |> (first << forDisRipet True)
         |> String.fromList
 
 
-latinigi : Char -> List Char
-latinigi x =
+latinigi : Dict Char String -> Char -> List Char
+latinigi latinigVortar x =
     let
         l =
             toLower x
@@ -95,43 +160,6 @@ latinigi x =
 idPerm : Set Char
 idPerm =
     Set.fromList <| alfabeto ++ ciferKajSimDis
-
-
-latinigVortar : Dict Char String
-latinigVortar =
-    Dict.fromList
-        [ ( 'а', "a" )
-        , ( 'б', "b" )
-        , ( 'в', "v" )
-        , ( 'г', "g" )
-        , ( 'д', "d" )
-        , ( 'е', "e" )
-        , ( 'ё', "je" )
-        , ( 'ж', "zh" )
-        , ( 'з', "z" )
-        , ( 'и', "i" )
-        , ( 'й', "ji" )
-        , ( 'к', "k" )
-        , ( 'л', "l" )
-        , ( 'м', "m" )
-        , ( 'н', "n" )
-        , ( 'о', "o" )
-        , ( 'п', "p" )
-        , ( 'р', "r" )
-        , ( 'с', "s" )
-        , ( 'т', "t" )
-        , ( 'у', "u" )
-        , ( 'ф', "f" )
-        , ( 'х', "h" )
-        , ( 'ц', "c" )
-        , ( 'ч', "ch" )
-        , ( 'ш', "sh" )
-        , ( 'щ', "sh" )
-        , ( 'ы', "i" )
-        , ( 'э', "e" )
-        , ( 'ю', "ju" )
-        , ( 'я', "ja" )
-        ]
 
 
 forDisRipet : Bool -> List Char -> ( List Char, Bool )
@@ -242,6 +270,17 @@ montr mod l =
                 ]
                 []
             , button [ disabled <| not <| (length mod.id >= 3) ] [ text <| L.auxKreiKontonFini l ]
+            , div
+                [ class "erar"
+                , style "display"
+                    (if mod.erar /= "" then
+                        "block"
+
+                     else
+                        "none"
+                    )
+                ]
+                [ text mod.erar ]
             ]
         ]
     ]

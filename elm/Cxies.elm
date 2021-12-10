@@ -1,7 +1,43 @@
-module Cxies exposing (..)
+port module Cxies exposing (..)
 
 import Browser exposing (UrlRequest(..))
 import File exposing (File)
+import Http exposing (Response)
+import Json.Decode exposing (Decoder, decodeString, errorToString)
+import Result exposing (mapError)
+
+
+port akirejo : (( String, String ) -> msg) -> Sub msg
+
+
+port konservu : ( String, String ) -> Cmd msg
+
+
+port akiru : String -> Cmd msg
+
+
+port raportiErar : String -> Cmd msg
+
+
+atend : (String -> Result String x) -> Response String -> Result String x
+atend conv resp =
+    case resp of
+        Http.GoodStatus_ _ tekst ->
+            conv tekst
+
+        Http.BadStatus_ _ erar ->
+            Err erar
+
+        Http.NetworkError_ ->
+            Err "KONEKT"
+
+        _ ->
+            Debug.todo ""
+
+
+atendJson : Decoder a -> Response String -> Result String a
+atendJson malkodil =
+    atend (mapError errorToString << decodeString malkodil)
 
 
 bildFormatoj : List String
@@ -59,3 +95,4 @@ type KontKreMsg
     | UzantBild File
     | UzantBildUrl String
     | UzantPri String
+    | LatinigVort (Result String (List ( String, String )))

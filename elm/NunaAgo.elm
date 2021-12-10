@@ -1,14 +1,13 @@
 module NunaAgo exposing (..)
 
 import Array exposing (fromList, get)
-import Cxies exposing (Msg(..), NAAuxMsg(..), NunaAgoMsg(..))
+import Cxies exposing (Msg(..), NAAuxMsg(..), NunaAgoMsg(..), atend, konservu)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, stopPropagationOn)
 import Http
 import I18Next exposing (Translations)
 import Json.Decode as D
-import Konservejo exposing (konservu)
 import Lingvar as L
 import Maybe exposing (andThen, withDefault)
 import Set exposing (member)
@@ -103,20 +102,8 @@ ensalutOrdon adr =
         , expect =
             Http.expectStringResponse
                 (NunaAgoMsg << AuxMsg << AuxEnsalutRes)
-                (\resp ->
-                    case resp of
-                        Http.GoodStatus_ _ _ ->
-                            Ok ()
-
-                        Http.BadStatus_ _ erar ->
-                            Err erar
-
-                        Http.NetworkError_ ->
-                            Err "KONEKT"
-
-                        _ ->
-                            Debug.todo ""
-                )
+            <|
+                atend (always <| Ok ())
         }
 
 
