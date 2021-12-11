@@ -6,6 +6,7 @@ maintainer:          "guardspirit@protonmail.com"
 copyright:           "2021 obscurative.ru"
 
 dependencies:
+- rio >= 0.1
 - base >= 4
 - template-haskell >= 2
 - network >= 3
@@ -24,6 +25,7 @@ dependencies:
 - dns >= 4
 - mime-mail >= 0.5
 - which >= 0.2
+- monad-logger >= 0.3
 
 executables:
   obskura:
@@ -36,3 +38,21 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -XNoImplicitPrelude
+    - -XDataKinds
+    - -XDerivingStrategies
+    - -XFlexibleInstances
+    - -XGADTs
+    - -XGeneralisedNewtypeDeriving
+    - -XMultiParamTypeClasses
+    - -XOverloadedStrings
+    - -XQuasiQuotes
+    - -XStandaloneDeriving
+    - -XTemplateHaskell
+    - -XTypeFamilies
+    - -XUndecidableInstances
+    - -XViewPatterns
+    - -XOverloadedStrings
+    - -XMonadComprehensions
+    - -XTupleSections
+

@@ -1,51 +1,43 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Lingvar where
 
-import Control.Applicative
+import Control.Monad.Logger
 import Data.Biapplicative
-import qualified Data.Map as Map
-import Data.Maybe
-import qualified Data.Set as Set
-import Data.Text (Text, pack, unpack)
 import Datum
+import RIO
+import qualified RIO.HashMap as HashMap
+import qualified RIO.HashSet as HashSet
+import qualified RIO.Partial
+import RIO.Text as T (pack, unpack)
 import Text.JSON
-import Text.Printf
 import Yesod.Core
-
-jsLeg :: JSON a => FilePath -> IO (Maybe a)
-jsLeg dosNomo = do
-  d <- readFile dosNomo
-  case decode d of
-    Ok x -> pure $ Just x
-    Error er -> do
-      putStrLn $ printf "Eraro dum mafermado de %s: %s" dosNomo er
-      pure Nothing
 
 legMankojn :: IO LingvMankoj
 legMankojn =
-  Map.fromList . map (bimap pack Set.fromList) . fromJSObject . fromJust <$>
-  jsLeg "lingvar/mank.json"
+  HashMap.fromList .
+  map (bimap pack HashSet.fromList) . fromJSObject . RIO.Partial.fromJust <$>
+  runStdoutLoggingT (jsLeg "lingvar/mank.json")
 
 data TradukPet
   = PetCxio
-  | PetNur (Set.Set Text)
+  | PetNur (HashSet.HashSet Text)
 
 tradukDos :: LingvMankoj -> [Text] -> TradukPet -> [FilePath]
-tradukDos mankMap lingvoj tutaPeto =
-  let filtr = pet' (flip Map.lookup mankMap <$> lingvoj) tutaPeto
-   in [lingvDos l | (l, f) <- zip (lingvoj ++ ["eo"]) filtr, f]
+tradukDos mankMap tutLin tutPet =
+  lingvDos <$>
+  tradukDos'
+    [(l, mankoj) | l <- tutLin, Just mankoj <- pure $ HashMap.lookup l mankMap]
+    tutPet
   where
-    pet' :: [Maybe (Set.Set Text)] -> TradukPet -> [Bool]
-    pet' _ (PetNur nul)
-      | null nul = []
-    pet' [] _ = [True] -- Uzu aprioran lingvon
-    pet' (Nothing:ls) peto = False : pet' ls peto
-    pet' ((Just l):ls) PetCxio = True : pet' ls (PetNur l)
-    pet' ((Just l):ls) (PetNur peto) =
-      let komun = l `Set.intersection` peto
-       in (Set.size komun < Set.size peto) : pet' ls (PetNur komun)
+    lingvDos :: Text -> FilePath
     lingvDos lin = "lingvar/" ++ unpack lin ++ ".json"
+    tradukDos' :: [(Text, HashSet Text)] -> TradukPet -> [Text]
+    tradukDos' _ (PetNur (HashSet.null -> True)) = []
+    tradukDos' [] _ = ["eo"]
+    tradukDos' ((l, mankoj):ls) PetCxio = l : tradukDos' ls (PetNur mankoj)
+    tradukDos' ((l, mankoj):ls) (PetNur peto) =
+      let resto = mankoj `HashSet.intersection` peto
+          havisEfikon = HashSet.size resto < HashSet.size peto
+       in [l | havisEfikon] ++ tradukDos' ls (PetNur resto)
 
 ordKun :: Ord a => [(a, v)] -> [(a, v)] -> [(a, v)]
 ordKun (l:ls) (d:ds) =
@@ -60,11 +52,11 @@ lingvar = do
   mankMap <- akirLingvMank <$> getYesod
   lingvoj <- languages
   case tradukDos mankMap lingvoj PetCxio of
-    [] -> error "Ne estas traduko"
+    [] -> error "Translation not found"
     [unu] -> sendFile typeJson unu
     multe -> do
-      dosj <- liftIO $ sequence (jsLeg <$> multe)
+      dosj <- sequence (jsLeg <$> multe)
       let kun =
-            foldr ordKun [] $ fromJSObject . fromJust <$> dosj :: [( String
-                                                                   , JSValue)]
+            foldr ordKun [] $ fromJSObject <$> catMaybes dosj :: [( String
+                                                                  , JSValue)]
       respond typeJson $ encode $ toJSObject kun

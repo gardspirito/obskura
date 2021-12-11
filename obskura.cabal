@@ -26,7 +26,7 @@ executable obskura
       Paths_obskura
   hs-source-dirs:
       servil
-  ghc-options: -Wall -O2 -fllvm -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall -O2 -fllvm -threaded -rtsopts -with-rtsopts=-N -XNoImplicitPrelude -XDataKinds -XDerivingStrategies -XFlexibleInstances -XGADTs -XGeneralisedNewtypeDeriving -XMultiParamTypeClasses -XOverloadedStrings -XQuasiQuotes -XStandaloneDeriving -XTemplateHaskell -XTypeFamilies -XUndecidableInstances -XViewPatterns -XOverloadedStrings -XMonadComprehensions -XTupleSections
   build-depends:
       base >=4
     , bifunctors >=5
@@ -36,10 +36,12 @@ executable obskura
     , filepath >=1.4
     , json >=0.4
     , mime-mail >=0.5
+    , monad-logger >=0.3
     , mongoDB >=2
     , network >=3
     , persistent >=2
     , persistent-mongoDB >=2
+    , rio >=0.1
     , template-haskell >=2
     , text >=1
     , which >=0.2

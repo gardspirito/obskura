@@ -1,14 +1,10 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE CPP #-}
-
 module Auxtent where
 
-import Control.Monad
 import qualified Data.Text as T
-import Data.Text.Encoding
 import Datum
 import Network.DNS
 import Network.Mail.Mime
+import RIO
 import Yesod.Core
 import Yesod.Form
 
@@ -16,9 +12,11 @@ cxuServiloEkzist :: ResolvSeed -> Domain -> IO Bool
 cxuServiloEkzist sem dom =
   withResolver sem $ \r -> do
     m <- lookupMX r dom
-    return $ case m of
-      Right x | any ((/= ".") . fst) x -> True
-      _ -> False
+    return $
+      case m of
+        Right x
+          | any ((/= ".") . fst) x -> True
+        _ -> False
 
 postAuxtent :: Traktil TypedContent
 postAuxtent = do

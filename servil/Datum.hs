@@ -1,17 +1,18 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-
 module Datum where
 
-import Data.Map ( Map )
-import Data.Set ( Set )
-import Data.Text ( Text )
-import Database.Persist.MongoDB ( ConnectionPool )
-import Yesod.Core ( HandlerFor, RenderMessage (..) )
-import Network.DNS ( ResolvSeed )
-import Yesod.Form ( FormMessage, defaultFormMessage )
+import Control.Monad.Logger as L
+import Database.Persist.MongoDB (ConnectionPool)
+import Network.DNS (ResolvSeed)
 import Network.Mail.Mime
+import RIO
+import RIO.ByteString (readFile)
+import RIO.Text
+import Text.JSON
+import Text.Printf
+import Yesod.Core (HandlerFor, RenderMessage(..))
+import Yesod.Form (FormMessage, defaultFormMessage)
 
-type LingvMankoj = Map Text (Set Text)
+type LingvMankoj = HashMap Text (HashSet Text)
 
 data Servil =
   Servil
@@ -24,4 +25,14 @@ data Servil =
 type Traktil = HandlerFor Servil
 
 instance RenderMessage Servil FormMessage where
-    renderMessage _ _ = defaultFormMessage
+  renderMessage _ _ = defaultFormMessage
+
+jsLeg :: (MonadIO m, MonadLogger m, JSON a) => FilePath -> m (Maybe a)
+jsLeg dosNomo = do
+  d <- readFile dosNomo
+  case decode $ unpack $ decodeUtf8With lenientDecode d of
+    Ok x -> pure $ Just x
+    Error er -> do
+      $(L.logError) $
+        pack (printf "Error while opening %s: %s" dosNomo er :: String)
+      pure Nothing

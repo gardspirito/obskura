@@ -1,16 +1,3 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralisedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans -Wno-unused-top-binds #-}
 
 import Auxtent
@@ -26,12 +13,14 @@ import Language.Haskell.TH (Type(..))
 import Lingvar
 import Network.DNS
 import Network.Mail.Mime
+import RIO hiding (Handler)
 import qualified System.FilePath as FilePath
 import System.Which
 import Yesod
 import qualified Yesod.Core.Content as YesCont
 
 -- FARENDE: Agordaro por retpoŝtadreso de sendanto.
+-- FARENDE: Malesperantigi erarojn
 share
   [mkPersist (mkPersistSettings (ConT ''MongoContext))]
   [persistLowerCase|
@@ -61,7 +50,8 @@ mkYesod
 |]
 
 instance Yesod Servil where
-  errorHandler (InvalidArgs x) = respond YesCont.typePlain $ Text.intercalate " " x
+  errorHandler (InvalidArgs x) =
+    respond YesCont.typePlain $ Text.intercalate " " x
   errorHandler aux = defaultErrorHandler aux
 
 getLingvar :: Handler TypedContent
@@ -100,13 +90,15 @@ getDosierP peto =
 kreuDNSSem :: IO ResolvSeed
 kreuDNSSem = makeResolvSeed defaultResolvConf {resolvTimeout = 1000000}
 
+-- Krei funkcion, kiu, akirinte plenigilon de retmesaĝon per datumo (ĉio krom informo pri adresanto),
+-- sendas retmesaĝon.
 kreuPosxtilo :: IO ((Mail -> Mail) -> IO ())
 kreuPosxtilo = do
-  sm <- fromJust <$> which "sendmail"
-  return $ \kreilo ->
-    sendmailCustom sm ["-t"] =<<
+  vojAlSm <- fromJust <$> which "sendmail" -- Trovi vojon al sendmail aplikaĵo
+  return $ \datumPlenigilo ->
+    sendmailCustom vojAlSm ["-t"] =<<
     renderMail'
-      (kreilo $
+      (datumPlenigilo $
        emptyMail
          Address
            { addressName = Just "Obskurativ"
@@ -117,8 +109,8 @@ main :: IO ()
 main = do
   mongo <-
     createMongoDBPool
-      "obskura"
-      "10.233.2.2"
+      "obskurativ"
+      "localhost"
       defaultPort
       Nothing
       defaultPoolStripes
