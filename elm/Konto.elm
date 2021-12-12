@@ -1,7 +1,7 @@
 module Konto exposing (..)
 
 import Char exposing (toLower)
-import Cxies exposing (KontKreMsg(..), Msg(..), PagxMsg(..), alfabeto, atendJson, bildFormatoj, ciferKajSimDis, raportiErar, simDis)
+import Cxies exposing (KontKreMsg(..), Msg(..), PagxMsg(..), alfabeto, atend, atendJson, bildFormatoj, ciferKajSimDis, raportiErar, simDis)
 import Dict exposing (Dict)
 import File exposing (File, mime)
 import Html exposing (..)
@@ -77,6 +77,20 @@ gxis msg mod =
 
                 Ok x ->
                     mapFirst (\vortar -> { mod | latinigVortar = vortar }) <| listAlVort x
+
+        KreiSend ->
+            ( mod, Debug.todo "Er" )
+
+
+
+--Http.post {
+--    url = "/api/ensalutu",
+--    body = multipartBody [
+--        textField "retposxt"
+--    ]
+--    expect =
+--        Http.expectStringResponse (always NulMsg) <| (atend <| Ok ())
+--})
 
 
 listAlVort : List ( String, String ) -> ( Dict Char String, Cmd msg )
@@ -269,7 +283,7 @@ montr mod l =
                 , maxlength 500
                 ]
                 []
-            , button [ disabled <| not <| (length mod.id >= 3) ] [ text <| L.auxKreiKontonFini l ]
+            , button [ disabled <| not <| (length mod.id >= 3), onClick (PagxMsg <| KontKreMsg <| KreiSend) ] [ text <| L.auxKreiKontonFini l ]
             , div
                 [ class "erar"
                 , style "display"

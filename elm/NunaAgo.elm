@@ -63,7 +63,7 @@ gxis msg mod =
 
 adrPerm : Set.Set Char
 adrPerm =
-    Set.fromList <| '@' :: Cxies.ciferKajSimDis
+    Set.fromList <| '@' :: Cxies.alfabeto ++ Cxies.ciferKajSimDis
 
 
 modifAdr : String -> String -> String

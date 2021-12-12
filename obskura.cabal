@@ -26,12 +26,12 @@ executable obskura
       Paths_obskura
   hs-source-dirs:
       servil
-  ghc-options: -Wall -O2 -fllvm -threaded -rtsopts -with-rtsopts=-N -XNoImplicitPrelude -XDataKinds -XDerivingStrategies -XFlexibleInstances -XGADTs -XGeneralisedNewtypeDeriving -XMultiParamTypeClasses -XOverloadedStrings -XQuasiQuotes -XStandaloneDeriving -XTemplateHaskell -XTypeFamilies -XUndecidableInstances -XViewPatterns -XOverloadedStrings -XMonadComprehensions -XTupleSections
+  ghc-options: -Wall -O2 -fllvm -threaded -rtsopts -with-rtsopts=-N -XNoImplicitPrelude -XDataKinds -XDerivingStrategies -XFlexibleInstances -XGADTs -XGeneralisedNewtypeDeriving -XMultiParamTypeClasses -XOverloadedStrings -XQuasiQuotes -XStandaloneDeriving -XTemplateHaskell -XTypeFamilies -XUndecidableInstances -XViewPatterns -XOverloadedStrings -XMonadComprehensions -XTupleSections -XLambdaCase
   build-depends:
       base >=4
+    , base64 >=0.4
     , bifunctors >=5
     , bytestring >=0.10
-    , containers >=0.6
     , dns >=4
     , filepath >=1.4
     , json >=0.4
@@ -41,9 +41,9 @@ executable obskura
     , network >=3
     , persistent >=2
     , persistent-mongoDB >=2
+    , random >=1.2
     , rio >=0.1
     , template-haskell >=2
-    , text >=1
     , which >=0.2
     , yesod >=1
     , yesod-core >=1

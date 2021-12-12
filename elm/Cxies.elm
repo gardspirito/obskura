@@ -19,11 +19,16 @@ port akiru : String -> Cmd msg
 port raportiErar : String -> Cmd msg
 
 
+
+-- Pasu konvertilo de respondteksto al Rezulto por akiri funkcion uzeblan kiel analizilo en expectStringResponse.
+-- Ĉi tiu metodo aŭtomate traktas ret erarojn kaj eraroj de malbona statuso.
+
+
 atend : (String -> Result String x) -> Response String -> Result String x
-atend conv resp =
+atend konv resp =
     case resp of
         Http.GoodStatus_ _ tekst ->
-            conv tekst
+            konv tekst
 
         Http.BadStatus_ _ erar ->
             Err erar
@@ -95,4 +100,5 @@ type KontKreMsg
     | UzantBild File
     | UzantBildUrl String
     | UzantPri String
+    | KreiSend
     | LatinigVort (Result String (List ( String, String )))

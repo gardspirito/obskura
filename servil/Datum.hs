@@ -1,7 +1,9 @@
 module Datum where
 
 import Control.Monad.Logger as L
-import Database.Persist.MongoDB (ConnectionPool)
+import Database.Persist.MongoDB
+import Database.Persist.TH
+import Language.Haskell.TH (Type(..))
 import Network.DNS (ResolvSeed)
 import Network.Mail.Mime
 import RIO
@@ -9,23 +11,33 @@ import RIO.ByteString (readFile)
 import RIO.Text
 import Text.JSON
 import Text.Printf
+import Yesod
 import Yesod.Core (HandlerFor, RenderMessage(..))
 import Yesod.Form (FormMessage, defaultFormMessage)
 
-type LingvMankoj = HashMap Text (HashSet Text)
+type Lingvo = Text
+
+type LingvMankoj = HashMap Lingvo (HashSet Text)
 
 data Servil =
   Servil
     { akirKonekt :: ConnectionPool
     , akirLingvMank :: LingvMankoj
     , akirDNSSem :: ResolvSeed
-    , posxtu :: (Mail -> Mail) -> IO ()
+    , akirSalutant :: TVar (HashMap Text (Maybe Int))
+    , posxtu :: Text -> (Mail -> Mail) -> IO ()
     }
 
 type Traktil = HandlerFor Servil
 
 instance RenderMessage Servil FormMessage where
   renderMessage _ _ = defaultFormMessage
+
+instance YesodPersist Servil where
+  type YesodPersistBackend Servil = MongoContext
+  runDB ago = do
+    pool <- akirKonekt <$> getYesod
+    runMongoDBPoolDef ago pool
 
 jsLeg :: (MonadIO m, MonadLogger m, JSON a) => FilePath -> m (Maybe a)
 jsLeg dosNomo = do
@@ -36,3 +48,10 @@ jsLeg dosNomo = do
       $(L.logError) $
         pack (printf "Error while opening %s: %s" dosNomo er :: String)
       pure Nothing
+
+share
+  [mkPersist (mkPersistSettings (ConT ''MongoContext))]
+  [persistLowerCase|
+Uzant
+  retposxt Text
+|]

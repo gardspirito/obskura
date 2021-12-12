@@ -13,5 +13,11 @@
   "aux.sukces1": "Aŭtentigpeto senditas!",
   "aux.sukces2": "Vi baldaŭ ricevos retmesaĝon.",
   "aux.vizitu": "Eble vi vizitu",
-  "erar.konekt": "Ne eblas konekti al la servilo..."
+  "erar.konekt": "Ne eblas konekti al la servilo...",
+  "servil.retmsg.ensaluti.temo": "Ensaluti en Obskurativ",
+  "servil.retmsg.salut": "Saluton!",
+  "servil.retmsg.ensaluti.1": "Ni ekaŭdis, ke vi volas ensaluti. Ĉi tio ja esta bona novaĵo.",
+  "servil.retmsg.ensaluti.2": "Jen estas la aŭtentigligilo:",
+  "servil.retmsg.ensaluti.3": "Ĝi laboros dum 5 minutoj.",
+  "servil.retmsg.ensaluti.4": "Ĉu vi ne sendis la peton? Nu, ĉi-kaze nur ignoru ĉi tiun mesaĝon."
 }

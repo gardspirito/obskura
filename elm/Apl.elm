@@ -43,7 +43,7 @@ init en _ sxlos =
                 ( t1, t2 ) =
                     Konto.komenci
             in
-            ( { sxlos = sxlos, l = tr, nunaAgo = Nothing, pagx = KontKreiPagx t1 }, t2 )
+            ( { sxlos = sxlos, l = tr, nunaAgo = Nothing, pagx = PagxRegula }, t2 )
 
         Err _ ->
             Debug.todo "Eraro dum ŝaltado."

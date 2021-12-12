@@ -16,16 +16,16 @@ dependencies:
 - persistent >= 2
 - persistent-mongoDB >= 2
 - mongoDB >= 2
-- text >= 1
 - bytestring >= 0.10
 - filepath >= 1.4
 - json >= 0.4
-- containers >= 0.6
 - bifunctors >= 5
 - dns >= 4
 - mime-mail >= 0.5
 - which >= 0.2
 - monad-logger >= 0.3
+- random >= 1.2
+- base64 >= 0.4
 
 executables:
   obskura:
@@ -55,4 +55,5 @@ executables:
     - -XOverloadedStrings
     - -XMonadComprehensions
     - -XTupleSections
+    - -XLambdaCase
 
