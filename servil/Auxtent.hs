@@ -1,6 +1,7 @@
 module Auxtent where
 
 import Datum
+import Lingvar
 import Network.DNS
 import Network.Mail.Mime
 import RIO
@@ -33,18 +34,33 @@ postAuxtent = do
   cxuEkz <- liftIO $ cxuServiloEkzist (akirDNSSem servil) $ encodeUtf8 domajn
   unless cxuEkz (invalidArgs ["SERVILO_NE_EKZISTAS"])
   kod <- registriSalut servil Nothing
+  (tsal, (tsubj, [t1, t2, t3, t4])) <-
+    traduki $
+    tKuntDe "servil.retmsg" $
+    tpet "salut" `kajtpet` tKuntDe "ensaluti" (tpet "temo" `kajtpet` tpetPart 4)
   -- Enmetu
   liftIO $
     posxtu
       servil
-      "Test"
+      tsubj
       (\malplena ->
          malplena
            { mailTo = [Address {addressName = Nothing, addressEmail = retposxt}]
            , mailParts =
                [ [ plainPart $
-                   TL.concat
-                     ["Jes! Ni finfine atingis sukceson! ", TL.fromStrict kod]
+                   TL.fromStrict $ T.concat
+                     [ tsal
+                     , " "
+                     , t1
+                     , "\n\n"
+                     , t2
+                     , ": http://localhost:3000/kern/ensalutkod/"
+                     , kod
+                     , "\n"
+                     , t3
+                     , "\n\n"
+                     , t4
+                     ]
                  ]
                ]
            })
@@ -52,7 +68,7 @@ postAuxtent = do
   where
     akirDomajn r
       | [_, dom] <- T.split (== '@') r = return dom
-      | otherwise = invalidArgs ["Retpoŝtadreso ne analizeblas"]
+      | otherwise = invalidArgs ["Cannot analyse email"]
     registriSalut :: MonadIO m => Servil -> Maybe Int -> m Text
     registriSalut (akirSalutant -> salutant) iden = registri'
       where
@@ -71,3 +87,4 @@ postAuxtent = do
               writeTVar salutant $ HM.insert kod iden sal'
               pure True
             Just _ -> pure False
+

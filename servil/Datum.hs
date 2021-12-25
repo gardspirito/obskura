@@ -39,6 +39,9 @@ instance YesodPersist Servil where
     pool <- akirKonekt <$> getYesod
     runMongoDBPoolDef ago pool
 
+instance MonadFail Traktil where
+  fail = error
+
 jsLeg :: (MonadIO m, MonadLogger m, JSON a) => FilePath -> m (Maybe a)
 jsLeg dosNomo = do
   d <- readFile dosNomo
@@ -54,4 +57,5 @@ share
   [persistLowerCase|
 Uzant
   retposxt Text
+  UnikRetposxt retposxt
 |]

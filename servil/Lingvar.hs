@@ -46,7 +46,7 @@ tradukDos tutPet tutLin mankMap =
     tradukDos' ((l, mankoj):ls) (PetNur peto) =
       let resto = mankoj `HS.intersection` peto
           havisEfikon = HS.size resto < HS.size peto
-       in [(Just $ mankoj `HS.difference` peto, l) | havisEfikon] ++
+       in [(Just $ peto `HS.difference` mankoj, l) | havisEfikon] ++
           tradukDos' ls (PetNur resto)
 
 ordKun :: Ord a => [(a, v)] -> [(a, v)] -> [(a, v)]
@@ -91,59 +91,65 @@ krudTradukoj = krudTradukoj'
           | nom `HS.member` legendaj =
             HM.insert nom val : procLin (HS.delete nom legendaj) linoj
           | otherwise = procLin legendaj linoj
-        procLin _ _ = error "Translation not found"
-
-
+        procLin legendaj _ = error ("Translation not found for " ++ show legendaj)
 
 data Interlingv a where
-  IPet :: HashSet Text -> (HashMap Text Text -> a) -> Interlingv a
   IPur :: a -> Interlingv a
+  IPet :: HashSet Text -> ((Text -> Maybe Text) -> a) -> Interlingv a
   IApl :: Interlingv (a -> b) -> Interlingv a -> Interlingv b
 
 instance Functor Interlingv where
-  fmap f (IPet pet akir) = IPet pet $ f . akir
   fmap f (IPur a) = IPur $ f a
+  fmap f (IPet pet akir) = IPet pet $ f . akir
   fmap f (IApl prevf val) = IApl (fmap (f .) prevf) val
-  
+
 instance Applicative Interlingv where
   pure = IPur
   (<*>) = IApl
 
-(<.>) :: Text -> Text -> Text
-(<.>) a b = a <> "." <> b
-
-infixr 5 <.>
+-- 
+tKuntDe :: Text -> Interlingv a -> Interlingv a
+tKuntDe kunt = tKuntDe'
+  where
+    tKuntDe' :: Interlingv a -> Interlingv a
+    tKuntDe' i@(IPur _) = i
+    tKuntDe' (IPet pet kreilo) = IPet (HS.map alKuntSpaco pet) (\vrt -> kreilo (vortKunDe vrt))
+    tKuntDe' (IApl a b) = IApl (tKuntDe' a) (tKuntDe' b)
+    alKuntSpaco = ((kunt <> ".") <>)
+    vortKunDe :: (Text -> a) -> Text -> a
+    vortKunDe old = old . alKuntSpaco -- Krei novan vortaron el olda uzantan nur subspacon de la olda. 
 
 -- Peti traduko por unu simbolo.
 tpet :: Text -> Interlingv Text
-tpet nom = IPet (HS.singleton nom) (P.fromJust . HM.lookup nom)
+tpet nom = IPet (HS.singleton nom) (\vrt -> P.fromJust $ vrt nom)
 
 -- Peti tradukon por listo de simboloj
 tpetList :: [Text] -> Interlingv [Text]
-tpetList list = IPet (HS.fromList list) (\m -> P.fromJust <$> (HM.lookup <$> list <*> [m]))
+tpetList list = IPet (HS.fromList list) (\vrt -> P.fromJust . vrt <$> list)
 
 -- Peti tradukon por kelkaj partoj en sama spaco.
--- Ekz. tpetPart "abc.def" 3 = tpetList ["abc.def.1", "abc.def.2", "abc.def.3"] 
-tpetPart :: Text -> Int -> Interlingv [Text]
-tpetPart spac nom = tpetList $ (spac <.>) . tshow <$> [1..nom] 
+-- Ekz. tpetPart 3 = tpetList ["1", "2", "3"] 
+tpetPart :: Int -> Interlingv [Text]
+tpetPart nom = tpetList $ tshow <$> [1 .. nom]
 
 kajtpet :: Interlingv a -> Interlingv b -> Interlingv (a, b)
 kajtpet = liftA2 (,)
 
 traduki :: Interlingv a -> Traktil a
 traduki tut = do
-    lingvoj <- languages
-    mankoj <- akirLingvMank <$> getYesod
-    tradukoj <- krudTradukoj tutBezon lingvoj mankoj
-    pure $ traduki' tradukoj
+  lingvoj <- languages
+  mankoj <- akirLingvMank <$> getYesod
+  tradukoj <- krudTradukoj tutBezon lingvoj mankoj
+  pure $ traduki' tradukoj
   where
     bezonate :: Interlingv a -> HashSet Text
-    bezonate (IPet pet _) = pet
     bezonate (IPur _) = HS.empty
+    bezonate (IPet pet _) = pet
     bezonate (IApl a b) = bezonate a <> bezonate b
-    tutBezon = bezonate tut 
-    traduki' tradukoj = traduki'' tut where
-      traduki'' :: Interlingv a -> a
-      traduki'' (IPet _ f) = f tradukoj
-      traduki'' (IPur x) = x
-      traduki'' (IApl a b) = traduki'' a (traduki'' b) 
+    tutBezon = bezonate tut
+    traduki' tradukoj = traduki'' tut
+      where
+        traduki'' :: Interlingv a -> a
+        traduki'' (IPur x) = x
+        traduki'' (IPet _ f) = f (`HM.lookup` tradukoj)
+        traduki'' (IApl a b) = traduki'' a (traduki'' b)

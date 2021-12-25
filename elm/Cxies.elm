@@ -2,10 +2,13 @@ port module Cxies exposing (..)
 
 import Browser exposing (UrlRequest(..))
 import File exposing (File)
-import Http exposing (Response)
+import Http exposing (Expect)
+import I18Next exposing (Translations)
 import Json.Decode exposing (Decoder, decodeString, errorToString)
+import Lingvar as L
 import Result exposing (mapError)
 
+infix left  7 (/)  = fdiv
 
 port akirejo : (( String, String ) -> msg) -> Sub msg
 
@@ -24,26 +27,61 @@ port raportiErar : String -> Cmd msg
 -- Ĉi tiu metodo aŭtomate traktas ret erarojn kaj eraroj de malbona statuso.
 
 
-atend : (String -> Result String x) -> Response String -> Result String x
-atend konv resp =
-    case resp of
-        Http.GoodStatus_ _ tekst ->
-            konv tekst
-
-        Http.BadStatus_ _ erar ->
-            Err erar
-
-        Http.NetworkError_ ->
-            Err "KONEKT"
-
-        _ ->
-            Debug.todo ""
+type PetErar
+    = KonektErar
+    | AliaErar String
 
 
-atendJson : Decoder a -> Response String -> Result String a
-atendJson malkodil =
-    atend (mapError errorToString << decodeString malkodil)
+atend : (Result PetErar String -> x) -> Expect x
+atend sendil =
+    Http.expectStringResponse sendil
+        (\resp ->
+            case resp of
+                Http.GoodStatus_ _ tekst ->
+                    Ok tekst
 
+                Http.BadStatus_ _ erar ->
+                    Err <| AliaErar erar
+
+                Http.NetworkError_ ->
+                    Err <| KonektErar
+
+                _ ->
+                    Debug.todo ""
+        )
+
+
+montrErar : PetErar -> Translations -> String
+montrErar er l =
+    (case er of
+        KonektErar ->
+            L.erarKonekt
+
+        AliaErar "SERVILO_NE_EKZISTAS" ->
+            L.auxErarNeEkzistas
+
+        AliaErar t ->
+            always t
+    )
+        l
+
+
+
+-- Turn Just x to [x] and Nothing to []
+
+mayList : Maybe x -> List x
+mayList m =
+    case m of
+        Just x ->
+            [ x ]
+
+        Nothing ->
+            []
+
+
+atendJson : Decoder a -> (Result PetErar a -> x) -> Expect x
+atendJson malkodil sendil =
+    atend <| Result.andThen (decodeString malkodil >> mapError (AliaErar << errorToString)) >> sendil
 
 bildFormatoj : List String
 bildFormatoj =
@@ -72,7 +110,6 @@ type Msg
     | Akir ( String, String )
     | UrlSxan UrlRequest
     | BildInstal (File -> Msg)
-    | Pigre (() -> Msg)
     | NulMsg
 
 
@@ -88,7 +125,7 @@ type NunaAgoMsg
 type NAAuxMsg
     = AuxAdr String
     | AuxEnsalutu
-    | AuxEnsalutRes (Result String ())
+    | AuxEnsalutRes (Result PetErar ())
 
 
 type PagxMsg
@@ -101,4 +138,4 @@ type KontKreMsg
     | UzantBildUrl String
     | UzantPri String
     | KreiSend
-    | LatinigVort (Result String (List ( String, String )))
+    | LatinigVort (Result PetErar (List ( String, String )))

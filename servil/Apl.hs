@@ -5,9 +5,7 @@ import qualified Data.ByteString as ByteString
 import Data.Maybe
 import Database.MongoDB.Connection
 import Database.Persist.MongoDB
-import Database.Persist.TH
 import Datum
-import Language.Haskell.TH (Type(..))
 import Lingvar
 import Network.DNS
 import Network.Mail.Mime
@@ -42,8 +40,9 @@ instance PathPiece DosierPeto where
 mkYesod
   "Servil"
   [parseRoutes|
-/lingvar Lingvar GET
-/api/ensalutu Auxtent POST
+/kern/lingvar Lingvar GET
+/kern/api/ensaluti Auxtent POST
+/kern/api/konfirmi/#Text Konfirmi POST
 !/#DosierPeto DosierP GET
 |]
 

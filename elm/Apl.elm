@@ -127,9 +127,6 @@ update msg_ model =
         BildInstal f ->
             ( model, file bildFormatoj f )
 
-        Pigre f ->
-            update (f ()) model
-
 
 mortSignal : Maybe NunaAgo.Model -> Cmd Msg
 mortSignal en =

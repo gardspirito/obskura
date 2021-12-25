@@ -1,7 +1,7 @@
 module NunaAgo exposing (..)
 
 import Array exposing (fromList, get)
-import Cxies exposing (Msg(..), NAAuxMsg(..), NunaAgoMsg(..), atend, konservu)
+import Cxies exposing (Msg(..), NAAuxMsg(..), NunaAgoMsg(..), PetErar(..), atend, konservu, montrErar)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, stopPropagationOn)
@@ -22,7 +22,7 @@ nePropaguKlak =
 
 
 type Model
-    = AuxMod { adr : String, erar : String, respAtend : Bool }
+    = AuxMod { adr : String, erar : Maybe PetErar, respAtend : Bool }
     | AuxSukc String
 
 
@@ -49,13 +49,13 @@ gxis msg mod =
                     ( AuxMod { auxMod | adr = modifAdr auxMod.adr adr }, Cmd.none )
 
                 AuxEnsalutu ->
-                    ( AuxMod { auxMod | erar = "", respAtend = True }, ensalutOrdon auxMod.adr )
+                    ( AuxMod { auxMod | erar = Nothing, respAtend = True }, ensalutOrdon auxMod.adr )
 
                 AuxEnsalutRes (Ok ()) ->
                     ( AuxSukc (auxMod.adr |> split "@" |> fromList |> get 1 |> withDefault ""), konservu ( "retposxt", auxMod.adr ) )
 
                 AuxEnsalutRes (Err erar) ->
-                    ( AuxMod { auxMod | erar = erar, respAtend = False }, Cmd.none )
+                    ( AuxMod { auxMod | erar = Just erar, respAtend = False }, Cmd.none )
 
         _ ->
             ( mod, Cmd.none )
@@ -92,37 +92,23 @@ cxuVeraAdr adr =
             False
 
 
+ensalutOrdon : String -> Cmd Msg
 ensalutOrdon adr =
     Http.post
-        { url = "/api/ensalutu"
+        { url = "kern/api/ensaluti"
         , body =
             Http.multipartBody
                 [ Http.stringPart "retposxt" adr
                 ]
         , expect =
-            Http.expectStringResponse
-                (NunaAgoMsg << AuxMsg << AuxEnsalutRes)
-            <|
-                atend (always <| Ok ())
+            atend
+                (NunaAgoMsg << AuxMsg << AuxEnsalutRes << Result.map (always ()))
         }
 
 
 cxuSxercist : String -> Translations -> Bool
 cxuSxercist adr l =
     L.auxJamvidis l == adr
-
-
-montrErar : String -> Translations -> String
-montrErar x l =
-    case x of
-        "SERVILO_NE_EKZISTAS" ->
-            L.auxErarNeEkzistas l
-
-        "KONEKT" ->
-            L.erarKonekt l
-
-        _ ->
-            x
 
 
 montrUzantMenu : { a | nunaAgo : Maybe Model, l : Translations } -> List (Html Msg)
@@ -139,12 +125,12 @@ montrUzantMenu m =
                             sxerc =
                                 adr == L.auxRetposxt m.l
 
-                            erarTekst =
+                            erarN =
                                 if sxerc then
                                     L.auxJamvidis m.l
 
                                 else
-                                    montrErar erar m.l
+                                    erar
                         in
                         [ text <| L.auxAuxtentigxo m.l
                         , input

@@ -42,12 +42,9 @@ komenci =
       , erar = ""
       }
     , Http.get
-        { url = "/uzantid-anst.json"
+        { url = "/kern/uzantid-anst.json"
         , expect =
-            Http.expectStringResponse
-                (PagxMsg << KontKreMsg << LatinigVort)
-            <|
-                atendJson (Decode.keyValuePairs Decode.string)
+            atendJson (Decode.keyValuePairs Decode.string) (PagxMsg << KontKreMsg << LatinigVort)
         }
       -- ripari
     )
