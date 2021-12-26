@@ -42,9 +42,10 @@ mkYesod
   [parseRoutes|
 /kern/lingvar Lingvar GET
 /kern/api/ensaluti Auxtent POST
-/kern/api/konfirmi/#Text Konfirmi POST
 !/#DosierPeto DosierP GET
 |]
+-- /kern/api/konfirmi/#Text Konfirmi POST
+
 
 instance Yesod Servil where
   errorHandler (InvalidArgs x) = respond YesCont.typePlain $ T.intercalate " " x

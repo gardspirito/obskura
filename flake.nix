@@ -13,6 +13,14 @@
           nativeBuildInputs = [
             mongodb
             stack
+            spago purescript
+            (pkgs.writeShellScriptBin "konpur" ''
+              cd faco
+              spago bundle-app
+              cd ..
+              cp faco/index.js stat/kern.js
+
+            '')
             elmPackages.elm
             elmPackages.elm-format
             haskellPackages.hlint

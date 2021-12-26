@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <title>Gxenerala</title>
-  <script src="kern.min.js"></script>
+  <script src="kern.js"></script>
   <link rel="stylesheet" href="stil.css">
 </head>
 <body>
   <script>
-    fetch("/lingvar").then(x => x.json()).then(x => {
+    /*fetch("/lingvar").then(x => x.json()).then(x => {
       var apl = Elm.Apl.init({flags: x});
 
       apl.ports.konservu.subscribe(msg => {
@@ -24,7 +24,7 @@
       apl.ports.raportiErar.subscribe(msg => {
         console.error(msg);
       })
-    });
+    });*/
   </script>
 </body>
 </html>
