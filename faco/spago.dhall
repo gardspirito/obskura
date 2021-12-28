@@ -12,12 +12,22 @@ to generate this file without the comments in this block.
 -}
 { name = "my-project"
 , dependencies =
-  [ "affjax"
+  [ "aff"
+  , "affjax"
+  , "argonaut-codecs"
   , "console"
   , "effect"
+  , "either"
+  , "foreign-object"
+  , "free"
+  , "freeap"
   , "halogen"
+  , "halogen-hooks"
+  , "maybe"
+  , "newtype"
   , "prelude"
   , "psci-support"
+  , "tuples"
   , "unordered-collections"
   ]
 , packages = ./packages.dhall

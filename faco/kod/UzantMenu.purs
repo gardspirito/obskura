@@ -1,5 +1,5 @@
 module UzantMenu
-  ( comp, proxy
+  ( komp, proxy
   ) where
 
 import Prelude
@@ -7,6 +7,7 @@ import Type.Proxy (Proxy(..))
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
+import Datum
 
 proxy = Proxy :: Proxy "uzantMenu"
 
@@ -14,22 +15,23 @@ data Stat
   = Aux { retposxt :: String }
   | Sukc
 
-comp :: forall p en el m. H.Component p en el m
-comp =
-  H.mkComponent
+komp ∷ ∀ p en el m. LinKomp p en el m
+komp =
+  mkLinKomp
     { initialState: const (Aux { retposxt: "" })
     , render: montr
     , eval: H.mkEval H.defaultEval
     }
 
-montr :: forall ag m. Stat -> H.ComponentHTML ag () m
-montr stat =
+montr :: forall ag m. Lingvo -> Stat -> H.ComponentHTML ag () m
+montr lin stat =
   HH.div
     [ HP.id "uzant-menu"
     ]
     [
         case stat of
             Aux { retposxt } -> HH.div [] [
+                    htraduk "aux.ensalutu" lin
                 ]
             Sukc -> HH.div [] []
     ]
