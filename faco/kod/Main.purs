@@ -1,26 +1,28 @@
 module Main
   ( main
+  , petLingv
   ) where
 
-import Prelude (class Show, Unit, Void, bind, const, discard, pure, show, unit, ($), (<#>), (>>=))
+import Affjax (get, printError)
+import Affjax.ResponseFormat (json)
+import Data.Argonaut.Decode (decodeJson)
+import Data.Either (Either(..))
+import Data.Map as HM
+import Data.Tuple (Tuple(..))
+import Datum (Lingvo)
 import Effect (Effect)
+import Effect.Aff.Class (class MonadAff, liftAff)
+import Effect.Class (class MonadEffect)
+import Effect.Class.Console (errorShow)
+import Foreign.Object (toArrayWithKey)
 import Halogen as H
 import Halogen.Aff as HA
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
+import Halogen.Hooks as HK
 import Halogen.VDom.Driver (runUI)
-import Effect.Class.Console (errorShow)
-import Affjax (get, printError)
-import Affjax.ResponseFormat (json)
-import Data.Argonaut.Decode (decodeJson)
-import Foreign.Object (toArrayWithKey)
-import Data.HashMap as HM
-import Data.Either (Either(..))
+import Prelude (class Show, Unit, bind, discard, pure, show, unit, ($), (<#>), (>>=))
 import UzantMenu as UzMenu
-import Effect.Class (class MonadEffect)
-import Datum (Lingvo)
-import Data.Tuple (Tuple(..))
-import Effect.Aff.Class (class MonadAff, liftAff)
 
 disvolvi :: forall m a. MonadEffect m => Show a => a -> Either String a -> m a
 disvolvi a (Left erar) = do
@@ -31,6 +33,7 @@ disvolvi _ (Right r) = pure r
 
 mapLiv :: forall l r d. (l -> r) -> Either l d -> Either r d
 mapLiv f (Left x) = Left $ f x
+
 mapLiv _ (Right d) = Right d
 
 petLingv :: forall m. MonadAff m => m Lingvo
@@ -47,32 +50,37 @@ main :: Effect Unit
 main =
   HA.runHalogenAff do
     pagx <- HA.awaitBody
-    lingv <- petLingv
-    runUI (komp lingv) unit pagx
+    lin <- petLingv
+    runUI (komp lin) unit pagx
 
-type Fakoj
-  = ( uzantMenu :: ∀ p. H.Slot p Void Int )
-
-komp :: ∀ p en el m. Lingvo -> H.Component p en el m
+komp :: ∀ p en el m. MonadAff m => Lingvo -> H.Component p en el m
 komp lin =
-  H.mkComponent
-    { initialState: const {lin}
-    , render: montr
-    , eval: H.mkEval H.defaultEval
-    }
+  HK.component \_ _ -> HK.do
+    menuH <- UzMenu.komp lin
+    HK.pure
+      $ HH.div
+          [ HP.id "supr"
+          ]
+          [ HH.div
+              [ HP.id "uzant"
+              ]
+              [ menuH
+              ]
+          ]
 
-montr :: ∀ ag m. {lin :: Lingvo} -> H.ComponentHTML ag Fakoj m
-montr {lin} =
+{-
+montr :: forall ag m. Unit -> H.ComponentHTML ag Fakoj m
+montr _ =
   HH.div
     [ HP.id "supr"
     ]
     [ HH.div
         [ HP.id "uzant"
         ]
-        [ HH.slot_ UzMenu.proxy 0 UzMenu.komp {lin, ene: unit}
+        [ HH.slot_ UzMenu.proxy 0 UzMenu.comp unit
         ]
     ]
-
+-}
 {-
         PagxRegula ->
             { title = "Testpaĝo"

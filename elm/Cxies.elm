@@ -8,7 +8,9 @@ import Json.Decode exposing (Decoder, decodeString, errorToString)
 import Lingvar as L
 import Result exposing (mapError)
 
-infix left  7 (/)  = fdiv
+
+infix left  7 (/) = fdiv
+
 
 port akirejo : (( String, String ) -> msg) -> Sub msg
 
@@ -69,6 +71,7 @@ montrErar er l =
 
 -- Turn Just x to [x] and Nothing to []
 
+
 mayList : Maybe x -> List x
 mayList m =
     case m of
@@ -82,6 +85,7 @@ mayList m =
 atendJson : Decoder a -> (Result PetErar a -> x) -> Expect x
 atendJson malkodil sendil =
     atend <| Result.andThen (decodeString malkodil >> mapError (AliaErar << errorToString)) >> sendil
+
 
 bildFormatoj : List String
 bildFormatoj =

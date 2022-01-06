@@ -1,72 +1,67 @@
 module Datum
-  ( Lingvo
-  )
-  where
+  ( HHTML
+  , Lingvo
+  , fapl
+  , fdevas
+  , fen
+  , fperm
+  , setigi
+  , striktAlfabet
+  , traduk
+  ) where
 
-import Prelude (type (~>), (<#>), (>>>))
-import Data.HashMap (HashMap, lookup)
-import Halogen as H
+import Data.Array (filter)
+import Data.Foldable (sequence_)
+import Data.Function.Uncurried (Fn2, runFn2)
+import Data.Map (Map, lookup)
+import Data.Maybe (fromMaybe, Maybe(..))
+import Data.Set as S
+import Data.String.CodeUnits (fromCharArray, toCharArray)
+import Effect (Effect)
+import Effect.Class (class MonadEffect, liftEffect)
 import Halogen.HTML as HH
-import Halogen.Query.HalogenQ (HalogenQ(..))
-import Halogen.Query.HalogenM (HalogenM(..), HalogenF(..), HalogenAp(..))
-import Control.Applicative.Free (hoistFreeAp)
-import Data.Newtype (over)
-import Data.Maybe (fromMaybe)
-import Control.Monad.Free (hoistFree)
+import Halogen.HTML.Events as HE
+import Halogen.Hooks as HK
+import Prelude (Unit, ($), (<<<), (>>>), bind, (<$>))
+import Web.Event.Event (Event, EventType(..))
 
 type Lingvo
-  = HashMap String String
+  = Map String String
 
-{-
-traduk :: String -> Lingvo -> String
-traduk p = lookup p >>> fromMaybe "[...]"
+type HHTML m uz
+  = forall w. HK.Hook m uz (HH.HTML w (HK.HookM m Unit))
 
-htraduk :: ∀ w i. String -> Lingvo -> HH.HTML w i
-htraduk p = traduk p >>> HH.text
+traduk :: Lingvo -> String -> String
+traduk l p = fromMaybe "[...]" $ lookup p l
 
-type LinKomp p en
-  = H.Component p ({ lin :: Lingvo, ene :: en })
+fperm :: S.Set Char -> String -> Maybe String
+fperm p = fapl (toCharArray >>> filter (_ `S.member` p) >>> fromCharArray)
 
-type KrudaKomp stat p ago fakoj en el m
-  = { eval :: (HalogenQ p ago en) ~> (HalogenM stat ago fakoj el m)
-    , initialState :: en -> stat
-    , render :: Lingvo -> stat -> H.ComponentHTML ago fakoj m
-    }
+fdevas :: ∀ a. (a -> Boolean) -> a -> Maybe a
+fdevas f x =
+  if f x then
+    Just x
+  else
+    Nothing
 
-mkLinKomp :: ∀ stat p ago fakoj en el m. KrudaKomp stat p ago fakoj en el m -> LinKomp p en el m
-mkLinKomp kruda =
-  H.mkComponent
-    { render: \stat -> kruda.render stat.lin stat.ene
-    , initialState: \en -> { ene: kruda.initialState en.ene, lin: en.lin }
-    , eval:
-        \p ->
-          etendStat
-            ( case p of
-                Receive { ene } r -> kruda.eval (Receive ene r)
-                Initialize r -> kruda.eval (Initialize r)
-                Finalize r -> kruda.eval (Finalize r)
-                Action ago r -> kruda.eval (Action ago r)
-                Query a b -> kruda.eval (Query a b)
-            )
-    }
+fapl :: ∀ a b. (a -> b) -> a -> Maybe b
+fapl f = Just <<< f
 
--- https://github.com/purescript-halogen/purescript-halogen/blob/v6.1.2/src/Halogen/Query/HalogenM.purs#L229-L234
-etendStat ::
-  ∀ enaStat restStat ago fakoj el m.
-  HalogenM enaStat ago fakoj el m
-    ~> HalogenM { ene :: enaStat | restStat } ago fakoj el m
-etendStat (HalogenM h) = HalogenM (hoistFree go h)
-  where
-  go :: H.HalogenF enaStat ago fakoj el m ~> H.HalogenF { ene :: enaStat | restStat } ago fakoj el m
-  go = case _ of
-    State fs -> State (\stat -> fs stat.ene <#> (\r -> stat { ene = r }))
-    Subscribe fes k -> Subscribe fes k
-    Unsubscribe sid a -> Unsubscribe sid a
-    Lift q -> Lift q
-    ChildQuery cq -> ChildQuery cq
-    Raise o a -> Raise o a
-    Par p -> Par (over HalogenAp (hoistFreeAp etendStat) p)
-    Fork hmu k -> Fork (etendStat hmu) k
-    Kill fid a -> Kill fid a
-    GetRef p k -> GetRef p k
--}
+foreign import traktiInput :: Fn2 (String -> Maybe String) Event (Effect (Maybe String))
+
+fen ::
+  ∀ m r.
+  MonadEffect m =>
+  (String -> Maybe String) ->
+  (String -> HK.HookM m Unit) ->
+  HH.IProp ( onInput :: Event, value :: String | r ) (HK.HookM m Unit)
+fen pip gxis =
+  HE.handler (EventType "input") \e -> do
+    gxiso <- liftEffect $ runFn2 traktiInput pip e
+    sequence_ $ gxis <$> gxiso
+
+setigi :: String -> S.Set Char
+setigi = S.fromFoldable <<< toCharArray
+
+striktAlfabet :: S.Set Char
+striktAlfabet = setigi "abcdefghijklmnopqrstuvwxyz0123456789.-_"

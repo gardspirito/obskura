@@ -1,97 +1,154 @@
 module Lingvar where
 
-import Control.Monad.Logger
-import Data.Biapplicative
+import Control.Monad.Logger as Log
+    ( logError, logWarn )
+import Data.Aeson (decode, decode')
+import Data.Type.Nat ( SNatI )
+import qualified Data.Vec.DataFamily.SpineStrict as Vec
 import Datum
+    ( Traktil,
+      Servil(akirLingvDat),
+      LingvDatum(..),
+      LingvMankoj,
+      Lingvo,
+      ServilErar(TradukErar),
+      ApiRespond,
+      KrudaJson(UnsafeKrudaJson),
+      sukc,
+      servilErar,
+      finiFrue )
 import RIO
+    ( (++),
+      snd,
+      otherwise,
+      ($),
+      Integral(toInteger),
+      Monad((>>=)),
+      Functor(fmap),
+      Ord((<)),
+      Applicative(pure, (<*>), liftA2),
+      Foldable(foldl'),
+      Traversable(sequence),
+      Semigroup((<>)),
+      Bool(True),
+      Maybe(..),
+      IO,
+      FilePath,
+      (.),
+      error,
+      Alternative((<|>)),
+      (<$>),
+      Text,
+      HashMap,
+      (&),
+      (<&>),
+      catMaybes,
+      fromMaybe,
+      tshow,
+      HashSet )
+import RIO.ByteString.Lazy (readFile)
 import qualified RIO.HashMap as HM
 import qualified RIO.HashSet as HS
-import qualified RIO.Partial as P
-import qualified RIO.Partial
 import qualified RIO.Text as T
-import Text.JSON
-import Yesod.Core
+import Yesod.Core ( MonadIO(..), getYesod, languages, MonadLogger )
 
-legMankojn :: IO LingvMankoj
-legMankojn =
-  HM.fromList .
-  map (bimap T.pack HS.fromList) . fromJSObject . RIO.Partial.fromJust <$>
-  runStdoutLoggingT (jsLeg "lingvar/mank.json")
-
-data TradukPet
-  = PetCxio
-  | PetNur (HashSet Text)
+legLingv :: IO LingvDatum
+legLingv = do
+  mankoj <- fromJust . decode' <$> readFile "lingvar/mank.json"
+  simboloj <-
+    fromJust . decode <$> readFile "lingvar/eo.json" :: IO (HashMap Text Text)
+  pure $ LingvDatum mankoj (HM.keys simboloj)
+  where
+    fromJust (Just x) = x
+    fromJust Nothing = error "Failed to load `mank.json` & `eo.json`."
 
 tradukDos ::
-     TradukPet -> [Lingvo] -> LingvMankoj -> [(Maybe (HashSet Text), FilePath)]
-tradukDos tutPet tutLin mankMap =
-  (lingvDos <$>) <$>
-  tradukDos'
-    [(l, mankoj) | l <- tutLin, Just mankoj <- pure $ HM.lookup l mankMap]
-    tutPet
+     MonadLogger m
+  => LingvMankoj
+  -> [Lingvo]
+  -> HashSet Text
+  -> m [(HashSet Text, FilePath)]
+tradukDos mankMap orlingvoj = tradukDos' orlingvoj
   where
-    lingvDos :: Text -> FilePath
-    lingvDos lin = "lingvar/" ++ T.unpack lin ++ ".json"
-    tradukDos' ::
-         [(Lingvo, HashSet Text)]
-      -> TradukPet
-      -> [(Maybe (HashSet Text), Lingvo)]
-    tradukDos' _ (PetNur (HS.null -> True)) = []
-    tradukDos' [] rest = [(Just $ rest' rest, "eo")]
-      where
-        rest' PetCxio = HS.empty
-        rest' (PetNur l) = l
-    tradukDos' ((l, mankoj):ls) PetCxio =
-      (Nothing, l) : tradukDos' ls (PetNur mankoj)
-    tradukDos' ((l, mankoj):ls) (PetNur peto) =
-      let resto = mankoj `HS.intersection` peto
-          havisEfikon = HS.size resto < HS.size peto
-       in [(Just $ peto `HS.difference` mankoj, l) | havisEfikon] ++
-          tradukDos' ls (PetNur resto)
+    tradukDos' [] (HS.null -> True) = pure []
+    tradukDos' [] p = do
+      $(Log.logWarn) $
+        "Translation(s) not found for " <>
+        tshow p <>
+        " in languages " <> tshow orlingvoj <> ", fallback to Esperanto"
+      pure [(p, lingvDos "eo")]
+    tradukDos' (l:ls) peto
+      | Just mankoj <- HM.lookup l mankMap =
+        let restPeto = peto `HS.intersection` mankoj
+            havisEfikon = HS.size restPeto < HS.size peto
+            uzataj = peto `HS.difference` mankoj -- Pigra elkalkulo
+         in ([(uzataj, lingvDos l) | havisEfikon] ++) <$> tradukDos' ls restPeto
+      | otherwise = tradukDos' ls peto
 
-ordKun :: Ord a => [(a, v)] -> [(a, v)] -> [(a, v)]
-ordKun (l:ls) (d:ds) =
-  case fst l `compare` fst d of
-    LT -> l : ordKun ls (d : ds)
-    EQ -> l : ordKun ls ds
-    GT -> d : ordKun (l : ls) ds
-ordKun ls ds = ls <|> ds
+lingvDos :: Text -> FilePath
+lingvDos lin = "lingvar/" ++ T.unpack lin ++ ".json"
 
-lingvar :: Traktil TypedContent
-lingvar = do
-  mankMap <- akirLingvMank <$> getYesod
+cxioTradukDos :: MonadLogger m => LingvMankoj -> [Lingvo] -> m [FilePath]
+cxioTradukDos mankMap orlingvoj = cxio' orlingvoj
+  where
+    cxio' [] = do
+      $(Log.logWarn) $
+        "No translation(s) at all found in " <>
+        tshow orlingvoj <> ", fallback to Esperanto"
+      pure [lingvDos "eo"]
+    cxio' (l:ls)
+      | Just mankoj <- HM.lookup l mankMap =
+        ([lingvDos l] ++) . (snd <$>) <$> tradukDos mankMap ls mankoj
+      | otherwise = cxioTradukDos mankMap ls
+
+-- Ne elsendu "servil."
+getLingvar :: Traktil (ApiRespond (HashMap Text Text))
+getLingvar = do
+  lingvDatum <- akirLingvDat <$> getYesod
   lingvoj <- languages
-  case snd <$> tradukDos PetCxio lingvoj mankMap of
-    [] -> error "Translation not found"
-    [unu] -> sendFile typeJson unu
+  traduk <- cxioTradukDos (lingvMankoj lingvDatum) lingvoj
+  case traduk of
+    [] -> do
+      servilErar TradukErar
+    [unu] -> do
+      dosEnhavo <- readFile unu
+      finiFrue <$> sukc (UnsafeKrudaJson dosEnhavo)
     multe -> do
-      dosj <- sequence (jsLeg <$> multe)
-      let kun =
-            foldr ordKun [] $ fromJSObject . P.fromJust <$> dosj :: [( String
-                                                                     , JSValue)]
-      respond typeJson $ encode $ toJSObject kun
+      dosjEnhavo <- sequence (readFile <$> multe)
+      let dosjAnalizitaj =
+            catMaybes $ decode <$> dosjEnhavo :: [HashMap Text Text]
+      sukc $
+        HM.fromList $
+        lingvSimboloj lingvDatum <&> \simbol ->
+          ( simbol
+          , fromMaybe "[...]" $
+            foldl'
+              (\ak lin -> ak <|> HM.lookup simbol lin)
+              Nothing
+              dosjAnalizitaj)
 
 krudTradukoj ::
-     MonadIO m
-  => HashSet Text
+     (MonadLogger m, MonadIO m)
+  => LingvMankoj
   -> [Lingvo]
-  -> LingvMankoj
+  -> HashSet Text
   -> m (HashMap Text Text)
 krudTradukoj = krudTradukoj'
   where
-    krudTradukoj' pet lingvoj =
-      procDos HM.empty . tradukDos (PetNur pet) lingvoj
+    krudTradukoj' mankoj lingvoj pet = do
+      tradukDos mankoj lingvoj pet >>= procDos HM.empty
     procDos rezMap [] = pure rezMap
-    procDos rezMap ((P.fromJust -> tutLegendaj, dosnomo):xs) = do
-      linoj <- fromJSObject . P.fromJust <$> runStdoutLoggingT (jsLeg dosnomo)
-      procDos (foldl' (&) rezMap $ procLin tutLegendaj linoj) xs
-      where
-        procLin (HS.null -> True) _ = []
-        procLin legendaj ((T.pack -> nom, val):linoj)
-          | nom `HS.member` legendaj =
-            HM.insert nom val : procLin (HS.delete nom legendaj) linoj
-          | otherwise = procLin legendaj linoj
-        procLin legendaj _ = error ("Translation not found for " ++ show legendaj)
+    procDos rezMap ((tutLegendaj, dosnomo):xs) = do
+      mlinDos <- liftIO $ decode' <$> readFile dosnomo
+      case mlinDos of
+        Just linDos ->
+          let bezonataParto =
+                HS.toMap tutLegendaj &
+                HM.mapWithKey (\k () -> fromMaybe "[...]" $ HM.lookup k linDos)
+           in procDos (rezMap <> bezonataParto) xs
+        Nothing -> do
+          $(Log.logError) $ "Failed to decode file " <> T.pack dosnomo
+          procDos rezMap xs
 
 data Interlingv a where
   IPur :: a -> Interlingv a
@@ -113,33 +170,39 @@ tKuntDe kunt = tKuntDe'
   where
     tKuntDe' :: Interlingv a -> Interlingv a
     tKuntDe' i@(IPur _) = i
-    tKuntDe' (IPet pet kreilo) = IPet (HS.map alKuntSpaco pet) (\vrt -> kreilo (vortKunDe vrt))
+    tKuntDe' (IPet pet kreilo) =
+      IPet (HS.map alKuntSpaco pet) (\vrt -> kreilo $ vrt . alKuntSpaco)
     tKuntDe' (IApl a b) = IApl (tKuntDe' a) (tKuntDe' b)
     alKuntSpaco = ((kunt <> ".") <>)
-    vortKunDe :: (Text -> a) -> Text -> a
-    vortKunDe old = old . alKuntSpaco -- Krei novan vortaron el olda uzantan nur subspacon de la olda. 
 
--- Peti traduko por unu simbolo.
+akirVrt :: Text -> (Text -> Maybe Text) -> Text
+akirVrt nom vrt = fromMaybe ("[" <> nom <> "]") $ vrt nom
+
+-- | Peti traduko por unu simbolo.
 tpet :: Text -> Interlingv Text
-tpet nom = IPet (HS.singleton nom) (\vrt -> P.fromJust $ vrt nom)
+tpet nom = IPet (HS.singleton nom) (akirVrt nom)
 
--- Peti tradukon por listo de simboloj
-tpetList :: [Text] -> Interlingv [Text]
-tpetList list = IPet (HS.fromList list) (\vrt -> P.fromJust . vrt <$> list)
+-- | Peti tradukon por listo de simboloj.
+tpetList :: SNatI n => Vec.Vec n Text -> Interlingv (Vec.Vec n Text)
+tpetList list =
+  IPet (HS.fromList $ Vec.toList list) (\vrt -> (`akirVrt` vrt) <$> list)
 
--- Peti tradukon por kelkaj partoj en sama spaco.
--- Ekz. tpetPart 3 = tpetList ["1", "2", "3"] 
-tpetPart :: Int -> Interlingv [Text]
-tpetPart nom = tpetList $ tshow <$> [1 .. nom]
+-- | Krei liston de tradukoj por elnumeritaj partoj de mesaĝo.
+-- Oni prenu nur komenca parto de ĉi tiu listo.
+-- @tpetPartoj = tpetList ["1", "2", "3", "4", "5", ...]@
+-- @tKunDe "abc" tpetPartoj = ["abc.1", "abc.2", "abc.3", "abc.4", "abc.5", ...]@
+tpetPartoj :: SNatI n => Interlingv (Vec.Vec n Text)
+tpetPartoj = tpetList $ Vec.tabulate (tshow . toInteger)
 
+-- | Kombini du petojn
 kajtpet :: Interlingv a -> Interlingv b -> Interlingv (a, b)
 kajtpet = liftA2 (,)
 
 traduki :: Interlingv a -> Traktil a
 traduki tut = do
   lingvoj <- languages
-  mankoj <- akirLingvMank <$> getYesod
-  tradukoj <- krudTradukoj tutBezon lingvoj mankoj
+  mankoj <- lingvMankoj . akirLingvDat <$> getYesod
+  tradukoj <- krudTradukoj mankoj lingvoj tutBezon
   pure $ traduki' tradukoj
   where
     bezonate :: Interlingv a -> HashSet Text

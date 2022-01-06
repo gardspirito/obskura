@@ -1,40 +1,61 @@
 module UzantMenu
-  ( komp, proxy
+  ( komp, Stat
   ) where
 
-import Prelude
-import Type.Proxy (Proxy(..))
-import Halogen as H
+import DOM.HTML.Indexed.InputType (InputType(InputText))
+import Data.Array (filter, length, (!!), all)
+import Data.Maybe (fromMaybe)
+import Data.String (Pattern(..))
+import Data.String.CodeUnits as S
+import Data.String.Common (split, toLower)
+import Data.Tuple.Nested ((/\))
+import Datum (HHTML, Lingvo, fapl, fdevas, fen, fperm, setigi, striktAlfabet, traduk)
+import Effect.Aff.Class (class MonadAff)
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
-import Datum
-
-proxy = Proxy :: Proxy "uzantMenu"
+import Halogen.Hooks (type (<>), useRef)
+import Halogen.Hooks as HK
+import Prelude (($), (>=>), (==), (<), (>>>), (<>), (#), (<#>), (>=), (&&))
 
 data Stat
   = Aux { retposxt :: String }
   | Sukc
 
-komp ∷ ∀ p en el m. LinKomp p en el m
-komp =
-  mkLinKomp
-    { initialState: const (Aux { retposxt: "" })
-    , render: montr
-    , eval: H.mkEval H.defaultEval
-    }
+type UzMenu
+  = HK.UseState Stat <> HK.UseRef String <> HK.Pure
 
-montr :: forall ag m. Lingvo -> Stat -> H.ComponentHTML ag () m
-montr lin stat =
-  HH.div
-    [ HP.id "uzant-menu"
-    ]
-    [
-        case stat of
-            Aux { retposxt } -> HH.div [] [
-                    htraduk "aux.ensalutu" lin
-                ]
-            Sukc -> HH.div [] []
-    ]
+komp ∷ ∀ m. MonadAff m => Lingvo -> HHTML m UzMenu
+komp lin = HK.do
+  stat /\ statId <- HK.useState $ Aux { retposxt: "" }
+  HK.pure
+    $ HH.div
+        [ HP.id "uzant-menu"
+        ] case stat of
+        Aux orstat@{ retposxt } ->
+          [ HH.text $ trd "aux.auxtentigxo"
+          , HH.input
+              [ HP.type_ InputText
+              , HP.placeholder (trd "aux.retposxt")
+              , fen
+                  (fdevas (kalkDe '@' >>> (_ < 2)) >=> fapl toLower >=> fperm (striktAlfabet <> setigi "@"))
+                  (\adr -> HK.put statId $ Aux $ orstat { retposxt = adr })
+              ]
+          , HH.button
+              [ HP.enabled $ verigiAdr retposxt
+              ]
+              [ HH.text $ trd "aux.ensalutu" ]
+          ]
+        Sukc -> []
+  where
+  trd = traduk lin
+
+  kalkDe liter = S.toCharArray >>> filter (_ == liter) >>> length
+
+  verigiAdr adr | [un, du] <- split (Pattern "@") adr
+    = S.length un >= 1 && kalkDe '.' du >= 1 && verigiDu du
+    where
+      verigiDu = split (Pattern ".") >>> all (\domajnpart -> S.length domajnpart >= 2)
+  verigiAdr _ = false
 
 {-
 

@@ -1,21 +1,64 @@
 {-# OPTIONS_GHC -Wno-orphans -Wno-unused-top-binds #-}
 
-import Auxtent
+import Auxtent ( postAuxtent )
 import qualified Data.ByteString as ByteString
-import Data.Maybe
-import Database.MongoDB.Connection
+import Data.Maybe ( fromJust )
+import Database.MongoDB.Connection ( defaultPort )
 import Database.Persist.MongoDB
-import Datum
-import Lingvar
+    ( createMongoDBPool,
+      defaultConnectionIdleTime,
+      defaultPoolStripes,
+      defaultStripeConnections )
+import Datum ( Servil(..) )
+import Lingvar ( legLingv, getLingvar )
 import Network.DNS
+    ( makeResolvSeed,
+      defaultResolvConf,
+      ResolvConf(resolvTimeout),
+      ResolvSeed )
 import Network.Mail.Mime
-import RIO hiding (Handler)
+    ( emptyMail,
+      renderMail',
+      sendmailCustom,
+      Address(Address, addressName, addressEmail),
+      Mail(mailHeaders) )
+import RIO
+    ( filter,
+      ($),
+      Eq(..),
+      Monad((>>=), return),
+      Read,
+      Show,
+      Applicative(pure),
+      Foldable(elem),
+      Char,
+      Maybe(Nothing, Just),
+      IO,
+      FilePath,
+      (.),
+      (&&),
+      not,
+      (<$>),
+      dropWhile,
+      Text,
+      newTVarIO )
 import qualified RIO.HashMap as HM
 import qualified RIO.Text as T
 import qualified RIO.Text.Partial as TP
 import qualified System.FilePath as FilePath
-import System.Which
+import System.Which ( which )
 import Yesod
+    ( PathPiece(..),
+      defaultErrorHandler,
+      warp,
+      respond,
+      sendFile,
+      mkYesod,
+      parseRoutes,
+      Yesod(errorHandler),
+      ContentType,
+      ErrorResponse(InvalidArgs),
+      RenderRoute(renderRoute) )
 import qualified Yesod.Core.Content as YesCont
 
 -- FARENDE: Agordaro por retpoŝtadreso de sendanto.
@@ -44,15 +87,11 @@ mkYesod
 /kern/api/ensaluti Auxtent POST
 !/#DosierPeto DosierP GET
 |]
+
 -- /kern/api/konfirmi/#Text Konfirmi POST
-
-
 instance Yesod Servil where
   errorHandler (InvalidArgs x) = respond YesCont.typePlain $ T.intercalate " " x
   errorHandler aux = defaultErrorHandler aux
-
-getLingvar :: Handler TypedContent
-getLingvar = lingvar
 
 -- /#DosierPeto DosierP GET
 sufAlTip :: DosierPeto -> ContentType
@@ -116,14 +155,14 @@ kreiServil = do
       defaultPoolStripes
       defaultStripeConnections
       defaultConnectionIdleTime
-  mankoj <- legMankojn
+  lingvDat <- legLingv
   sem <- kreuDNSSem
   posxtilo <- kreuPosxtilo
   salutant <- newTVarIO HM.empty
   pure $
     Servil
       { akirKonekt = mongo
-      , akirLingvMank = mankoj
+      , akirLingvDat = lingvDat
       , akirDNSSem = sem
       , akirSalutant = salutant
       , posxtu = posxtilo

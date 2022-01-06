@@ -76,6 +76,10 @@ body {
     border-radius: 0 0 3px 3px;
 }
 
+#uzant-menu button:disabled {
+    opacity: 0.5;
+}
+
 #krei-kont button:disabled {
     opacity: 0.25;
 }

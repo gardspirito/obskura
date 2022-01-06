@@ -1,20 +1,49 @@
 module Auxtent where
 
+import Data.ByteString.Base64.URL ( encodeBase64 )
+import Data.Vec.DataFamily.SpineStrict (Vec((:::), VNil))
 import Datum
-import Lingvar
-import Network.DNS
+    ( Traktil,
+      Servil(akirSalutant, akirDNSSem, posxtu),
+      KlientErar(MalgxustaRetposxt),
+      ApiRespond,
+      sukc,
+      klientErar,
+      finiFrue )
+import Lingvar ( tKuntDe, tpet, tpetPartoj, kajtpet, traduki )
+import Network.DNS ( lookupMX, withResolver, Domain, ResolvSeed )
 import Network.Mail.Mime
+    ( plainPart,
+      Address(Address, addressName, addressEmail),
+      Mail(mailTo, mailParts) )
 import RIO
+    ( fst,
+      otherwise,
+      ($),
+      Eq((==), (/=)),
+      Monad(return),
+      Applicative(pure),
+      Bool(..),
+      Int,
+      Maybe(..),
+      IO,
+      Either(Right),
+      (.),
+      any,
+      (<$>),
+      Text,
+      unless,
+      readTVar,
+      writeTVar,
+      encodeUtf8,
+      atomically )
 import qualified RIO.HashMap as HM
 import qualified RIO.Text as T
 import qualified RIO.Text.Lazy as TL
-import Yesod.Core
-import Yesod.Form
-
---import Control.Concurrent.STM
-import Data.ByteString.Base64.URL
-import System.Random
 import System.Random.Stateful
+    ( genByteString, applyAtomicGen, globalStdGen )
+import Yesod.Core ( MonadIO(..), getYesod, invalidArgs )
+import Yesod.Form ( textField, ireq, runInputPost )
 
 cxuServiloEkzist :: ResolvSeed -> Domain -> IO Bool
 cxuServiloEkzist sem dom =
@@ -26,7 +55,7 @@ cxuServiloEkzist sem dom =
           | any ((/= ".") . fst) x -> True
         _ -> False
 
-postAuxtent :: Traktil TypedContent
+postAuxtent :: Traktil (ApiRespond ())
 postAuxtent = do
   retposxt <- runInputPost (ireq textField "retposxt")
   domajn <- akirDomajn retposxt
@@ -34,10 +63,10 @@ postAuxtent = do
   cxuEkz <- liftIO $ cxuServiloEkzist (akirDNSSem servil) $ encodeUtf8 domajn
   unless cxuEkz (invalidArgs ["SERVILO_NE_EKZISTAS"])
   kod <- registriSalut servil Nothing
-  (tsal, (tsubj, [t1, t2, t3, t4])) <-
+  (tsal, (tsubj, t1 ::: t2 ::: t3 ::: t4 ::: VNil)) <-
     traduki $
     tKuntDe "servil.retmsg" $
-    tpet "salut" `kajtpet` tKuntDe "ensaluti" (tpet "temo" `kajtpet` tpetPart 4)
+    tpet "salut" `kajtpet` tKuntDe "ensaluti" (tpet "temo" `kajtpet` tpetPartoj)
   -- Enmetu
   liftIO $
     posxtu
@@ -48,7 +77,8 @@ postAuxtent = do
            { mailTo = [Address {addressName = Nothing, addressEmail = retposxt}]
            , mailParts =
                [ [ plainPart $
-                   TL.fromStrict $ T.concat
+                   TL.fromStrict $
+                   T.concat
                      [ tsal
                      , " "
                      , t1
@@ -64,11 +94,11 @@ postAuxtent = do
                  ]
                ]
            })
-  respond typePlain ("OK" :: T.Text)
+  sukc ()
   where
     akirDomajn r
-      | [_, dom] <- T.split (== '@') r = return dom
-      | otherwise = invalidArgs ["Cannot analyse email"]
+      | [_, dom] <- T.split (== '@') r = pure dom
+      | otherwise = finiFrue <$> klientErar MalgxustaRetposxt
     registriSalut :: MonadIO m => Servil -> Maybe Int -> m Text
     registriSalut (akirSalutant -> salutant) iden = registri'
       where
@@ -87,4 +117,3 @@ postAuxtent = do
               writeTVar salutant $ HM.insert kod iden sal'
               pure True
             Just _ -> pure False
-
