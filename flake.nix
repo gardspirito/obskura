@@ -14,15 +14,35 @@
             mongodb
             stack
             spago purescript
-            (pkgs.writeShellScriptBin "konpur" ''
-              cd faco
-              spago bundle-app
-              cd ..
-              cp faco/index.js stat/kern.js
+            (pkgs.writeShellScriptBin "faco" ''
+              set -e
+              ordejo=$(mktemp)
+              mank=$(mktemp)
+              echo '{' > $mank
+              kom=true
+              rm ../lingvar/mank.json || true
+              for d in ../lingvar/*.json; do
+                jq 'to_entries | sort | from_entries' $d > $ordejo
+                mv $ordejo $d
+                if [ $kom = false ]; then
+                  echo ',' >> $mank
+                fi
+                kom=false
+                echo -n "\"$(basename $d .json)\": " >> $mank
+                echo "[$(cat ../lingvar/eo.json),$(cat $d)]" | jq '(.[0] | keys)-(.[1] | keys)' -r >> $mank
+                truncate -s -1 $mank # Forigu finan `\n`
+              done
+              echo >> $mank
+              echo "}" >> $mank
+              sed -i '/^[{}]/! s/^/  /g' $mank
+              cp $mank ../lingvar/mank.json
 
+              spago bundle-app
+              cp index.js ../stat/kern.js
             '')
-            elmPackages.elm
-            elmPackages.elm-format
+            (pkgs.writeShellScriptBin "servil" ''
+              stack run --cwd ..
+            '')
             haskellPackages.hlint
             haskellPackages.hindent
             nodePackages.uglify-js
