@@ -62,7 +62,8 @@ import Yesod
 import qualified Yesod.Core.Content as YesCont
 
 -- FARENDE: Agordaro por retpoŝtadreso de sendanto.
--- FARENDE: Malesperantigi erarojn
+-- FARENDE: Totaleco de IO operacioj (specife de\ readFile, multe uzata en Lingvar)
+-- FARENDE: Apriora erartraktilo (por ke klientoj akiru ĝustan JSON kaze de fiasko)
 data DosierPeto =
   DosierPeto
     { dosPlenNomo :: !Text
@@ -84,7 +85,7 @@ mkYesod
   "Servil"
   [parseRoutes|
 /kern/lingvar Lingvar GET
-/kern/api/ensaluti Auxtent POST
+/kern/ensaluti Auxtent POST
 !/#DosierPeto DosierP GET
 |]
 

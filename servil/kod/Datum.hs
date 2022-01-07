@@ -114,12 +114,13 @@ data Respond v
   | KlientErar KlientErar
   deriving (Generic)
 
-data ServilErar =
-  TradukErar
+data ServilErar = TradukErar
   deriving (Generic)
 
 data KlientErar =
-  MalgxustaRetposxt
+    MalgxustaRetposxtErar
+  | DomajnoNeEkzistasErar
+  | Stub ()
   deriving (Generic)
 
 instance ToJSON ServilErar where

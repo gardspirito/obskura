@@ -25,7 +25,7 @@ executable obskura
       Lingvar
       Paths_obskura
   hs-source-dirs:
-      servil
+      kod
   ghc-options: -Wall -O2 -fllvm -threaded -rtsopts -with-rtsopts=-N -XNoImplicitPrelude -XDataKinds -XDerivingStrategies -XFlexibleInstances -XGADTs -XGeneralisedNewtypeDeriving -XMultiParamTypeClasses -XOverloadedStrings -XQuasiQuotes -XStandaloneDeriving -XTemplateHaskell -XTypeFamilies -XUndecidableInstances -XViewPatterns -XOverloadedStrings -XMonadComprehensions -XTupleSections -XLambdaCase -XDeriveGeneric -XBlockArguments -XPatternSynonyms
   build-depends:
       aeson >=1

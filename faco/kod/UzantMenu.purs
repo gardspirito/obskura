@@ -1,31 +1,31 @@
 module UzantMenu
-  ( komp, Stat
+  ( komp
+  , Stat
   ) where
 
 import DOM.HTML.Indexed.InputType (InputType(InputText))
-import Data.Array (filter, length, (!!), all)
-import Data.Maybe (fromMaybe)
+import Data.Array (filter, length, all)
 import Data.String (Pattern(..))
 import Data.String.CodeUnits as S
 import Data.String.Common (split, toLower)
 import Data.Tuple.Nested ((/\))
-import Datum (HHTML, Lingvo, fapl, fdevas, fen, fperm, setigi, striktAlfabet, traduk)
+import Datum (HHTML, Lingvo, fapl, fdevas, fen, fperm, setigi, striktAlfabet)
 import Effect.Aff.Class (class MonadAff)
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
-import Halogen.Hooks (type (<>), useRef)
+import Halogen.Hooks (type (<>))
 import Halogen.Hooks as HK
-import Prelude (($), (>=>), (==), (<), (>>>), (<>), (#), (<#>), (>=), (&&))
+import Prelude (($), (>=>), (==), (<), (>>>), (<>), (>=), (&&))
 
 data Stat
   = Aux { retposxt :: String }
   | Sukc
 
 type UzMenu
-  = HK.UseState Stat <> HK.UseRef String <> HK.Pure
+  = HK.UseState Stat <> HK.Pure
 
 komp ∷ ∀ m. MonadAff m => Lingvo -> HHTML m UzMenu
-komp lin = HK.do
+komp trd = HK.do
   stat /\ statId <- HK.useState $ Aux { retposxt: "" }
   HK.pure
     $ HH.div
@@ -42,19 +42,19 @@ komp lin = HK.do
               ]
           , HH.button
               [ HP.enabled $ verigiAdr retposxt
+              --, HP.onClick 
               ]
               [ HH.text $ trd "aux.ensalutu" ]
           ]
         Sukc -> []
   where
-  trd = traduk lin
-
   kalkDe liter = S.toCharArray >>> filter (_ == liter) >>> length
 
-  verigiAdr adr | [un, du] <- split (Pattern "@") adr
-    = S.length un >= 1 && kalkDe '.' du >= 1 && verigiDu du
-    where
+  verigiAdr adr
+    | [ un, du ] <- split (Pattern "@") adr = S.length un >= 1 && kalkDe '.' du >= 1 && verigiDu du
+      where
       verigiDu = split (Pattern ".") >>> all (\domajnpart -> S.length domajnpart >= 2)
+
   verigiAdr _ = false
 
 {-

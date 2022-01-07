@@ -1,38 +1,55 @@
 module Datum
-  ( HHTML
+  ( Erar(..)
+  , HHTML
+  , KlientErar(..)
   , Lingvo
+  , ServilErar(..)
+  , Tradukenda
   , fapl
   , fdevas
   , fen
   , fperm
+  , mapErar
+  , petKern
+  , priskribiKlientErar
+  , priskribiServilErar
   , setigi
   , striktAlfabet
-  , traduk
   ) where
 
+import Affjax as Affj
+import Affjax.RequestBody as Affj.Pet
+import Affjax.ResponseFormat as Affj.Resp
+import Data.Argonaut.Core (Json, stringify)
+import Data.Argonaut.Decode (class DecodeJson, JsonDecodeError, decodeJson, printJsonDecodeError)
+import Data.Argonaut.Encode (class EncodeJson, encodeJson)
 import Data.Array (filter)
+import Data.Either (Either(..))
 import Data.Foldable (sequence_)
 import Data.Function.Uncurried (Fn2, runFn2)
-import Data.Map (Map, lookup)
-import Data.Maybe (fromMaybe, Maybe(..))
+import Data.HTTP.Method (CustomMethod, Method)
+import Data.Maybe (Maybe(..))
 import Data.Set as S
 import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Effect (Effect)
+import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Class (class MonadEffect, liftEffect)
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
+import Halogen.HTML.Properties as HP
 import Halogen.Hooks as HK
-import Prelude (Unit, ($), (<<<), (>>>), bind, (<$>))
+import Prelude (Unit, bind, pure, show, ($), (<#>), (<$>), (<<<), (<>), (>>>))
+import Stil as KL
 import Web.Event.Event (Event, EventType(..))
 
 type Lingvo
-  = Map String String
+  = Tradukenda -> String
 
 type HHTML m uz
   = forall w. HK.Hook m uz (HH.HTML w (HK.HookM m Unit))
 
-traduk :: Lingvo -> String -> String
-traduk l p = fromMaybe "[...]" $ lookup p l
+type Tradukenda
+  = String
 
 fperm :: S.Set Char -> String -> Maybe String
 fperm p = fapl (toCharArray >>> filter (_ `S.member` p) >>> fromCharArray)
@@ -65,3 +82,84 @@ setigi = S.fromFoldable <<< toCharArray
 
 striktAlfabet :: S.Set Char
 striktAlfabet = setigi "abcdefghijklmnopqrstuvwxyz0123456789.-_"
+
+mapErar :: ∀ l r d. (l -> r) -> Either l d -> Either r d
+mapErar f (Left x) = Left $ f x
+
+mapErar _ (Right x) = Right x
+
+type ApiMethod
+  = Either Method CustomMethod
+
+type ApiMsg
+  = { tag :: String, contents :: Maybe Json }
+
+petKern ::
+  ∀ v m r.
+  EncodeJson v =>
+  MonadAff m =>
+  DecodeJson r =>
+  ApiMethod ->
+  String ->
+  v ->
+  m (Either Erar r)
+petKern method url v = do
+  kResp <-
+    liftAff
+      $ Affj.request
+          ( Affj.defaultRequest
+              { url = "/kern/" <> url
+              , method = method
+              , content = Just (Affj.Pet.json $ encodeJson v)
+              , responseFormat = Affj.Resp.json
+              }
+          )
+  pure do
+    jsonResp <- mapErar (sE <<< RetErar) $ kResp <#> \x -> x.body
+    resp :: ApiMsg <-
+      mapErar (sE <<< JsonErar) $ decodeJson jsonResp
+    case resp of
+      { tag: "Sukc", contents: Just dat } -> mapErar (sE <<< JsonErar) $ decodeJson dat
+      { tag: "ServilErar" } -> Left $ sE ServilEnaErar
+      { tag: "KlientErar", contents: Just dat } -> case malkodiKlientErar dat of
+        Left e -> Left $ ServilErar e
+        Right e -> Left $ KlientErar e
+      { tag, contents } -> Left $ sE $ NekonataVarErar tag contents
+  where
+  sE = ServilErar
+
+data Erar
+  = KlientErar KlientErar
+  | ServilErar ServilErar
+
+data KlientErar
+  = MalgxustaRetposxtErar
+  | DomajnoNeEkzistasErar
+
+data ServilErar
+  = ServilEnaErar
+  | RetErar Affj.Error
+  | JsonErar JsonDecodeError -- Fiaskis elanaizi servilan respondon.
+  | NekonataVarErar String (Maybe Json)
+
+malkodiKlientErar :: Json -> Either ServilErar KlientErar
+malkodiKlientErar erar = do
+  val :: ApiMsg <- mapErar JsonErar $ decodeJson erar
+  case val of
+    { tag: "MalgxustaRetposxtErar" } -> Right $ MalgxustaRetposxtErar
+    { tag: "DomajnoNeEkzistasErar" } -> Right $ DomajnoNeEkzistasErar
+    { tag, contents } -> Left $ NekonataVarErar tag contents
+
+priskribiServilErar :: ∀ w i. Lingvo -> ServilErar -> Array (HH.HTML w i)
+priskribiServilErar trd = case _ of
+  ServilEnaErar -> [ htrd "erar.servil.ena", HH.em [ HP.class_ KL.etaTekst ] $ [ htrd "erar.servil.ena.sub" ] ] -- Farende: Malgranda
+  RetErar erar -> [ htrd "erar.servil.ret", HH.br_, HH.text $ Affj.printError erar ]
+  JsonErar erar -> [ htrd "erar.servil.malkod", HH.br_, HH.text $ printJsonDecodeError erar ]
+  NekonataVarErar tag contents -> [ htrd "erar.servil.nekonata-var", HH.br_, HH.text tag, HH.text $ show $ stringify <$> contents ]
+  where
+  htrd = HH.text <<< trd
+
+priskribiKlientErar :: Lingvo -> KlientErar -> String
+priskribiKlientErar trd = case _ of
+  MalgxustaRetposxtErar -> trd "erar.klient.malgxusta-retposxt"
+  DomajnoNeEkzistasErar -> trd "erar.klient.domajno-ne-ekzistas"

@@ -34,7 +34,7 @@ dependencies:
 executables:
   obskura:
     main:                Apl.hs
-    source-dirs:         servil
+    source-dirs:         kod
     ghc-options:
     - -Wall
     - -O2

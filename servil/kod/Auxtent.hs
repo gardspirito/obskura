@@ -5,7 +5,7 @@ import Data.Vec.DataFamily.SpineStrict (Vec((:::), VNil))
 import Datum
     ( Traktil,
       Servil(akirSalutant, akirDNSSem, posxtu),
-      KlientErar(MalgxustaRetposxt),
+      KlientErar(DomajnoNeEkzistasErar, MalgxustaRetposxtErar),
       ApiRespond,
       sukc,
       klientErar,
@@ -42,7 +42,7 @@ import qualified RIO.Text as T
 import qualified RIO.Text.Lazy as TL
 import System.Random.Stateful
     ( genByteString, applyAtomicGen, globalStdGen )
-import Yesod.Core ( MonadIO(..), getYesod, invalidArgs )
+import Yesod.Core ( MonadIO(..), getYesod )
 import Yesod.Form ( textField, ireq, runInputPost )
 
 cxuServiloEkzist :: ResolvSeed -> Domain -> IO Bool
@@ -61,7 +61,7 @@ postAuxtent = do
   domajn <- akirDomajn retposxt
   servil <- getYesod
   cxuEkz <- liftIO $ cxuServiloEkzist (akirDNSSem servil) $ encodeUtf8 domajn
-  unless cxuEkz (invalidArgs ["SERVILO_NE_EKZISTAS"])
+  unless cxuEkz (finiFrue <$> klientErar DomajnoNeEkzistasErar)
   kod <- registriSalut servil Nothing
   (tsal, (tsubj, t1 ::: t2 ::: t3 ::: t4 ::: VNil)) <-
     traduki $
@@ -98,7 +98,7 @@ postAuxtent = do
   where
     akirDomajn r
       | [_, dom] <- T.split (== '@') r = pure dom
-      | otherwise = finiFrue <$> klientErar MalgxustaRetposxt
+      | otherwise = finiFrue <$> klientErar MalgxustaRetposxtErar
     registriSalut :: MonadIO m => Servil -> Maybe Int -> m Text
     registriSalut (akirSalutant -> salutant) iden = registri'
       where
