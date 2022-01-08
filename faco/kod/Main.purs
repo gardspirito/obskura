@@ -4,27 +4,32 @@ module Main
   , petLingv
   ) where
 
+import Data.Array as Arr
 import Data.Either (Either(..))
 import Data.HTTP.Method (Method(..))
 import Data.Map as HM
 import Data.Map as M
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\), type (/\))
-import Datum (Erar, Lingvo, mapErar, petKern)
+import Datum (Erar(..), Lingvo, mapErar, petKern, priskribiKlientErar, priskribiServilErar)
+import Debug (trace)
 import Effect (Effect)
 import Effect.Aff (Milliseconds(..), delay)
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Class (class MonadEffect, liftEffect)
 import Effect.Class.Console (errorShow)
 import Effect.Ref as Ref
+import Foreign.Object (toArrayWithKey)
 import Halogen as H
 import Halogen.Aff as HA
 import Halogen.HTML as HH
+import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Halogen.Hooks (type (<>))
+import Halogen.Hooks (type (<>), useLifecycleEffect)
 import Halogen.Hooks as HK
 import Halogen.VDom.Driver (runUI)
-import Prelude (class Show, Unit, bind, discard, map, pure, unit, ($), (+), (<#>), (>>=), (>=), (>>>))
+import Prelude (class Show, Unit, bind, const, discard, map, pure, unit, ($), (+), (<#>), (<>), (>=), (>>=), (>>>))
 import UzantMenu as UzMenu
 
 disvolvi :: forall m a. MonadEffect m => Show a => a -> Either String a -> m a
@@ -37,7 +42,7 @@ disvolvi _ (Right r) = pure r
 petLingv :: forall m. MonadAff m => m Lingvo
 petLingv =
   petKern (Left GET) "lingvar" unit
-    >>= (mapErar (\_ -> "Gardanto estas fiulo") >>> disvolvi HM.empty)
+    >>= (mapErar (\v -> trace v \_ ->"Gardanto estas fiulo") >>> disvolvi HM.empty)
     <#> (\m p -> fromMaybe "[...]" $ HM.lookup p m)
 
 -- ERAR! INFORMU UZANTON PRI LA ERARO!
@@ -45,13 +50,21 @@ petLingv =
 main :: Effect Unit
 main =
   HA.runHalogenAff do
-    lin <- petLingv
     pagx <- HA.awaitBody
-    runUI (komp lin) unit pagx
+    runUI komp unit pagx
 
-komp :: ∀ p en el m. MonadAff m => Lingvo -> H.Component p en el m
-komp lin =
+komp :: ∀ p en el m. MonadAff m => H.Component p en el m
+komp =
   HK.component \_ _ -> HK.do
+    linMap /\ linId <- HK.useState HM.empty
+    let lin p = fromMaybe "[...]" (HM.lookup p linMap)
+    erarilo /\ erarH <- erarList lin
+    useLifecycleEffect do
+      respond <- petKern (Left GET) "lingvar" unit
+      case respond of
+        Left erar -> erarilo erar
+        Right nlin -> HK.put linId $ HM.fromFoldable (toArrayWithKey Tuple nlin)
+      pure Nothing
     menuH <- UzMenu.komp lin
     HK.pure
       $ HH.div
@@ -60,7 +73,8 @@ komp lin =
           [ HH.div
               [ HP.id "uzant"
               ]
-              [ menuH
+              [ menuH,
+                erarH
               ]
           ]
 
@@ -70,9 +84,9 @@ type UzErarList
 type ErarElem
   = { elem :: Erar, morto :: Ref.Ref (Maybe Int) }
 
-erarList :: ∀ m w. MonadAff m => HK.Hook m UzErarList ((Erar -> HK.HookM m Unit) /\ (HH.HTML w (HK.HookM m Unit)))
-erarList = HK.do
-  _ /\ statId <- HK.useState M.empty
+erarList :: ∀ m w. MonadAff m => Lingvo -> HK.Hook m UzErarList ((Erar -> HK.HookM m Unit) /\ (HH.HTML w (HK.HookM m Unit)))
+erarList trd = HK.do
+  stat /\ statId <- HK.useState M.empty
   _ /\ nombril <- HK.useState 0
   HK.pure
     $ ( \erar -> do
@@ -84,8 +98,18 @@ erarList = HK.do
       )
     /\ HH.div
         [ HP.id "erar-list" ]
-        []
+        (Arr.fromFoldable $ M.values stat <#> \erarEl ->
+          let titol /\ info = tekstigi erarEl.elem in
+            HH.div (revivigiMsg erarEl.morto) $ [
+              HH.h1_ [HH.text titol],
+              HH.br_
+            ] <> info
+        )
   where
+  tekstigi :: ∀ i. Erar -> String /\ Array (HH.HTML w i)
+  tekstigi = case _ of
+    ServilErar erar -> trd "erar.servil" /\ priskribiServilErar trd erar
+    KlientErar erar -> trd "erar.klient" /\ [HH.text $ priskribiKlientErar trd erar]
   atendMorton ref = cikl
     where
     morttempo = 5
@@ -97,3 +121,7 @@ erarList = HK.do
         pure unit
       else
         cikl
+  revivigiMsg ref = [
+      HE.onMouseEnter \_ -> liftEffect $ Ref.write Nothing ref,
+      HE.onMouseLeave \_ -> liftEffect $ Ref.write (Just 0) ref
+    ]

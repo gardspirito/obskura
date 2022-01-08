@@ -15,6 +15,7 @@ to generate this file without the comments in this block.
   [ "aff"
   , "affjax"
   , "argonaut-codecs"
+  , "argonaut-core"
   , "arrays"
   , "console"
   , "debug"
@@ -27,6 +28,7 @@ to generate this file without the comments in this block.
   , "functions"
   , "halogen"
   , "halogen-hooks"
+  , "http-methods"
   , "maybe"
   , "ordered-collections"
   , "prelude"
@@ -37,6 +39,7 @@ to generate this file without the comments in this block.
   , "transformers"
   , "tuples"
   , "web-events"
+  , "web-html"
   ]
 , packages = ./packages.dhall
 , sources = [ "kod/**/*.purs" ]
