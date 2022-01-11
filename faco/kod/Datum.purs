@@ -2,9 +2,9 @@ module Datum
   ( Erar(..)
   , HHTML
   , KlientErar(..)
-  , Lingvo
+  , Tradukil
   , ServilErar(..)
-  , Tradukenda
+  , Tradukenda(..)
   , fapl
   , fdevas
   , fen
@@ -15,7 +15,8 @@ module Datum
   , priskribiServilErar
   , setigi
   , striktAlfabet
-  ) where
+  )
+  where
 
 import Affjax as Affj
 import Affjax.RequestBody as Affj.Pet
@@ -41,15 +42,16 @@ import Halogen.Hooks as HK
 import Prelude (Unit, bind, pure, show, ($), (<#>), (<$>), (<<<), (<>), (>>>))
 import Stil as KL
 import Web.Event.Event (Event, EventType(..))
+import Safe.Coerce
 
-type Lingvo
-  = Tradukenda -> String
+type Tradukil
+  = forall x. Coercible x Tradukenda => x -> String
 
 type HHTML m uz
   = forall w. HK.Hook m uz (HH.HTML w (HK.HookM m Unit))
 
-type Tradukenda
-  = String
+newtype Tradukenda
+  = Tradukenda String
 
 fperm :: S.Set Char -> String -> Maybe String
 fperm p = fapl (toCharArray >>> filter (_ `S.member` p) >>> fromCharArray)
@@ -150,7 +152,7 @@ malkodiKlientErar erar = do
     { tag: "DomajnoNeEkzistasErar" } -> Right $ DomajnoNeEkzistasErar
     { tag, contents } -> Left $ NekonataVarErar tag contents
 
-priskribiServilErar :: ∀ w i. Lingvo -> ServilErar -> Array (HH.HTML w i)
+priskribiServilErar :: ∀ w i. Tradukil -> ServilErar -> Array (HH.HTML w i)
 priskribiServilErar trd = case _ of
   ServilEnaErar -> [ htrd "erar.servil.ena", HH.em [ HP.class_ KL.etaTekst ] $ [ htrd "erar.servil.ena.sub" ] ] -- Farende: Malgranda
   RetErar erar -> [ htrd "erar.servil.ret", HH.br_, HH.text $ Affj.printError erar ]
@@ -159,7 +161,7 @@ priskribiServilErar trd = case _ of
   where
   htrd = HH.text <<< trd
 
-priskribiKlientErar :: Lingvo -> KlientErar -> String
+priskribiKlientErar :: Tradukil -> KlientErar -> String
 priskribiKlientErar trd = case _ of
   MalgxustaRetposxtErar -> trd "erar.klient.malgxusta-retposxt"
   DomajnoNeEkzistasErar -> trd "erar.klient.domajno-ne-ekzistas"

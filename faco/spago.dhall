@@ -35,6 +35,7 @@ to generate this file without the comments in this block.
   , "profunctor-lenses"
   , "psci-support"
   , "refs"
+  , "safe-coerce"
   , "strings"
   , "transformers"
   , "tuples"

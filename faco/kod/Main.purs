@@ -1,7 +1,6 @@
 module Main
   ( erarList
   , main
-  , petLingv
   ) where
 
 import Data.Array as Arr
@@ -12,13 +11,11 @@ import Data.Map as M
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\), type (/\))
-import Datum (Erar(..), KlientErar(..), Lingvo, mapErar, petKern, priskribiKlientErar, priskribiServilErar)
-import Debug (trace)
+import Datum (Erar(..), Tradukenda(..), Tradukil, petKern, priskribiKlientErar, priskribiServilErar)
 import Effect (Effect)
-import Effect.Aff (Milliseconds(..), delay, forkAff)
+import Effect.Aff (Milliseconds(..), delay)
 import Effect.Aff.Class (class MonadAff, liftAff)
-import Effect.Class (class MonadEffect, liftEffect)
-import Effect.Class.Console (errorShow, log)
+import Effect.Class (liftEffect)
 import Effect.Ref as Ref
 import Foreign.Object (toArrayWithKey)
 import Halogen as H
@@ -29,24 +26,10 @@ import Halogen.HTML.Properties as HP
 import Halogen.Hooks (type (<>), fork, useLifecycleEffect)
 import Halogen.Hooks as HK
 import Halogen.VDom.Driver (runUI)
-import Prelude (class Show, Unit, bind, const, discard, map, pure, show, unit, ($), (+), (<#>), (<>), (>=), (>>=), (>>>))
+import Prelude (Unit, bind, discard, map, pure, unit, ($), (+), (<#>), (<>), (>=))
+import Safe.Coerce (coerce)
 import UzantMenu as UzMenu
 
-disvolvi :: forall m a. MonadEffect m => Show a => a -> Either String a -> m a
-disvolvi a (Left erar) = do
-  errorShow erar
-  pure a
-
-disvolvi _ (Right r) = pure r
-
-petLingv :: forall m. MonadAff m => m Lingvo
-petLingv =
-  petKern (Left GET) "lingvar" unit
-    >>= (mapErar (\v -> trace v \_ ->"Gardanto estas fiulo") >>> disvolvi HM.empty)
-    <#> (\m p -> fromMaybe "[...]" $ HM.lookup p m)
-
--- ERAR! INFORMU UZANTON PRI LA ERARO!
--- ... mi elradikigu ĉi tiun abominaĵon.
 main :: Effect Unit
 main =
   HA.runHalogenAff do
@@ -57,8 +40,8 @@ komp :: ∀ p en el m. MonadAff m => H.Component p en el m
 komp =
   HK.component \_ _ -> HK.do
     linMap /\ linId <- HK.useState HM.empty
-    let lin p = fromMaybe "[...]" (HM.lookup p linMap)
-    erarilo /\ erarH <- erarList lin
+    let trd = (\p -> fromMaybe "[...]" (HM.lookup (coerce p) linMap)) :: Tradukil
+    erarilo /\ erarH <- erarList trd
     useLifecycleEffect do
       respond <- petKern (Left GET) "lingvar" unit
       case respond of
@@ -66,7 +49,7 @@ komp =
         Right nlin -> HK.put linId $ HM.fromFoldable (toArrayWithKey Tuple nlin)
       pure Nothing
 
-    menuH <- UzMenu.komp lin
+    menuH <- UzMenu.komp trd
     HK.pure
       $ HH.div
           [ HP.id "supr"
@@ -85,13 +68,12 @@ type UzErarList
 type ErarElem
   = { elem :: Erar, morto :: Ref.Ref (Maybe Int) }
 
-erarList :: ∀ m w. MonadAff m => Lingvo -> HK.Hook m UzErarList ((Erar -> HK.HookM m Unit) /\ (HH.HTML w (HK.HookM m Unit)))
+erarList :: ∀ m w. MonadAff m => Tradukil -> HK.Hook m UzErarList ((Erar -> HK.HookM m Unit) /\ (HH.HTML w (HK.HookM m Unit)))
 erarList trd = HK.do
   stat /\ statId <- HK.useState M.empty
   _ /\ nombril <- HK.useState 0
   HK.pure
     $ ( \erar -> do
-          liftEffect $ log "h"
           nombro <- HK.modify nombril (_ + 1)
           ref <- liftEffect $ Ref.new (Just 0)
           HK.modify_ statId (M.insert nombro { elem: erar, morto: ref })

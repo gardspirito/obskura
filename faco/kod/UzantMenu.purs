@@ -11,7 +11,7 @@ import Data.String (Pattern(..))
 import Data.String.CodeUnits as S
 import Data.String.Common (split, toLower)
 import Data.Tuple.Nested ((/\))
-import Datum (Erar(..), HHTML, Lingvo, fapl, fdevas, fen, fperm, petKern, setigi, striktAlfabet)
+import Datum (Erar(..), HHTML, Tradukil, Tradukenda(..), fapl, fdevas, fen, fperm, petKern, setigi, striktAlfabet)
 import Effect.Aff.Class (class MonadAff)
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
@@ -26,7 +26,7 @@ data Stat
 type UzMenu
   = HK.UseState Stat <> HK.Pure
 
-komp ∷ ∀ m. MonadAff m => Lingvo -> HHTML m UzMenu
+komp ∷ ∀ m. MonadAff m => Tradukil -> HHTML m UzMenu
 komp trd = HK.do
   stat /\ statId <- HK.useState $ Aux { retposxt: "" }
   HK.pure
