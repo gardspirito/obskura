@@ -11,23 +11,23 @@ module Datum
   , fperm
   , mapErar
   , petKern
-  , priskribiKlientErar
-  , priskribiServilErar
+  , skrKErar
   , setigi
   , striktAlfabet
-  )
-  where
+  ) where
 
+import Safe.Coerce
 import Affjax as Affj
 import Affjax.RequestBody as Affj.Pet
 import Affjax.ResponseFormat as Affj.Resp
-import Data.Argonaut.Core (Json, stringify)
-import Data.Argonaut.Decode (class DecodeJson, JsonDecodeError, decodeJson, printJsonDecodeError)
+import Data.Argonaut.Core (Json)
+import Data.Argonaut.Decode (class DecodeJson, JsonDecodeError, decodeJson)
 import Data.Argonaut.Encode (class EncodeJson, encodeJson)
 import Data.Array (filter)
 import Data.Either (Either(..))
 import Data.Foldable (sequence_)
 import Data.Function.Uncurried (Fn2, runFn2)
+import Data.Generic.Rep (class Generic)
 import Data.HTTP.Method (CustomMethod, Method)
 import Data.Maybe (Maybe(..))
 import Data.Set as S
@@ -37,12 +37,9 @@ import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Class (class MonadEffect, liftEffect)
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
-import Halogen.HTML.Properties as HP
 import Halogen.Hooks as HK
-import Prelude (Unit, bind, pure, show, ($), (<#>), (<$>), (<<<), (<>), (>>>))
-import Stil as KL
+import Prelude (Unit, bind, pure, ($), (<#>), (<$>), (<<<), (<>), (>>>))
 import Web.Event.Event (Event, EventType(..))
-import Safe.Coerce
 
 type Tradukil
   = forall x. Coercible x Tradukenda => x -> String
@@ -144,6 +141,8 @@ data ServilErar
   | JsonErar JsonDecodeError -- Fiaskis elanaizi servilan respondon.
   | NekonataVarErar String (Maybe Json)
 
+derive instance genKE :: Generic KlientErar _
+
 malkodiKlientErar :: Json -> Either ServilErar KlientErar
 malkodiKlientErar erar = do
   val :: ApiMsg <- mapErar JsonErar $ decodeJson erar
@@ -152,16 +151,8 @@ malkodiKlientErar erar = do
     { tag: "DomajnoNeEkzistasErar" } -> Right $ DomajnoNeEkzistasErar
     { tag, contents } -> Left $ NekonataVarErar tag contents
 
-priskribiServilErar :: ∀ w i. Tradukil -> ServilErar -> Array (HH.HTML w i)
-priskribiServilErar trd = case _ of
-  ServilEnaErar -> [ htrd "erar.servil.ena", HH.em [ HP.class_ KL.etaTekst ] $ [ htrd "erar.servil.ena.sub" ] ] -- Farende: Malgranda
-  RetErar erar -> [ htrd "erar.servil.ret", HH.br_, HH.text $ Affj.printError erar ]
-  JsonErar erar -> [ htrd "erar.servil.malkod", HH.br_, HH.text $ printJsonDecodeError erar ]
-  NekonataVarErar tag contents -> [ htrd "erar.servil.nekonata-var", HH.br_, HH.text tag, HH.text $ show $ stringify <$> contents ]
-  where
-  htrd = HH.text <<< trd
-
-priskribiKlientErar :: Tradukil -> KlientErar -> String
-priskribiKlientErar trd = case _ of
+-- | Priskribi klientan eraron
+skrKErar :: Tradukil -> KlientErar -> String
+skrKErar trd = case _ of
   MalgxustaRetposxtErar -> trd "erar.klient.malgxusta-retposxt"
   DomajnoNeEkzistasErar -> trd "erar.klient.domajno-ne-ekzistas"
