@@ -1,6 +1,10 @@
 {
   "eo": [],
   "ru": [
+    "erar.klient",
+    "erar.klient.domajno-ne-ekzistas",
+    "erar.klient.malgxusta-retposxt",
+    "erar.servil",
     "erar.servil.ena",
     "erar.servil.ena.sub",
     "erar.servil.malkod",

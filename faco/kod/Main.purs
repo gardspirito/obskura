@@ -12,13 +12,13 @@ import Data.Map as M
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\), type (/\))
-import Datum (Erar(..), Lingvo, mapErar, petKern, priskribiKlientErar, priskribiServilErar)
+import Datum (Erar(..), KlientErar(..), Lingvo, mapErar, petKern, priskribiKlientErar, priskribiServilErar)
 import Debug (trace)
 import Effect (Effect)
-import Effect.Aff (Milliseconds(..), delay)
+import Effect.Aff (Milliseconds(..), delay, forkAff)
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Class (class MonadEffect, liftEffect)
-import Effect.Class.Console (errorShow)
+import Effect.Class.Console (errorShow, log)
 import Effect.Ref as Ref
 import Foreign.Object (toArrayWithKey)
 import Halogen as H
@@ -26,10 +26,10 @@ import Halogen.Aff as HA
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
-import Halogen.Hooks (type (<>), useLifecycleEffect)
+import Halogen.Hooks (type (<>), fork, useLifecycleEffect)
 import Halogen.Hooks as HK
 import Halogen.VDom.Driver (runUI)
-import Prelude (class Show, Unit, bind, const, discard, map, pure, unit, ($), (+), (<#>), (<>), (>=), (>>=), (>>>))
+import Prelude (class Show, Unit, bind, const, discard, map, pure, show, unit, ($), (+), (<#>), (<>), (>=), (>>=), (>>>))
 import UzantMenu as UzMenu
 
 disvolvi :: forall m a. MonadEffect m => Show a => a -> Either String a -> m a
@@ -65,6 +65,7 @@ komp =
         Left erar -> erarilo erar
         Right nlin -> HK.put linId $ HM.fromFoldable (toArrayWithKey Tuple nlin)
       pure Nothing
+
     menuH <- UzMenu.komp lin
     HK.pure
       $ HH.div
@@ -73,9 +74,9 @@ komp =
           [ HH.div
               [ HP.id "uzant"
               ]
-              [ menuH,
-                erarH
+              [ menuH
               ]
+          , erarH
           ]
 
 type UzErarList
@@ -90,11 +91,14 @@ erarList trd = HK.do
   _ /\ nombril <- HK.useState 0
   HK.pure
     $ ( \erar -> do
+          liftEffect $ log "h"
           nombro <- HK.modify nombril (_ + 1)
           ref <- liftEffect $ Ref.new (Just 0)
           HK.modify_ statId (M.insert nombro { elem: erar, morto: ref })
-          liftAff $ atendMorton ref
-          HK.modify_ statId (M.delete nombro)
+          _ <- fork do
+            liftAff $ atendMorton ref
+            HK.modify_ statId (M.delete nombro)
+          pure unit
       )
     /\ HH.div
         [ HP.id "erar-list" ]
@@ -102,7 +106,7 @@ erarList trd = HK.do
           let titol /\ info = tekstigi erarEl.elem in
             HH.div (revivigiMsg erarEl.morto) $ [
               HH.h1_ [HH.text titol],
-              HH.br_
+              HH.hr_
             ] <> info
         )
   where

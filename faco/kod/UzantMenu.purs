@@ -5,11 +5,13 @@ module UzantMenu
 
 import DOM.HTML.Indexed.InputType (InputType(InputText))
 import Data.Array (filter, length, all)
+import Data.Either (Either(..))
+import Data.HTTP.Method (Method(..))
 import Data.String (Pattern(..))
 import Data.String.CodeUnits as S
 import Data.String.Common (split, toLower)
 import Data.Tuple.Nested ((/\))
-import Datum (HHTML, Lingvo, fapl, fdevas, fen, fperm, setigi, striktAlfabet)
+import Datum (Erar(..), HHTML, Lingvo, fapl, fdevas, fen, fperm, petKern, setigi, striktAlfabet)
 import Effect.Aff.Class (class MonadAff)
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
