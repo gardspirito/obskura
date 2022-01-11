@@ -1,49 +1,51 @@
 module Auxtent where
 
-import Data.ByteString.Base64.URL ( encodeBase64 )
+import Data.ByteString.Base64.URL (encodeBase64)
 import Data.Vec.DataFamily.SpineStrict (Vec((:::), VNil))
 import Datum
-    ( Traktil,
-      Servil(akirSalutant, akirDNSSem, posxtu),
-      KlientErar(DomajnoNeEkzistasErar, MalgxustaRetposxtErar),
-      ApiRespond,
-      sukc,
-      klientErar,
-      finiFrue )
-import Lingvar ( tKuntDe, tpet, tpetPartoj, kajtpet, traduki )
-import Network.DNS ( lookupMX, withResolver, Domain, ResolvSeed )
+  ( ApiRespond
+  , KlientErar(DomajnoNeEkzistasErar, MalgxustaRetposxtErar)
+  , Servil(akirDNSSem, akirSalutant, posxtu)
+  , Traktil
+  , finiFrue
+  , klientErar
+  , sukc
+  )
+import Lingvar (kajtpet, tKuntDe, tpet, tpetPartoj, traduki)
+import Network.DNS (Domain, ResolvSeed, lookupMX, withResolver)
 import Network.Mail.Mime
-    ( plainPart,
-      Address(Address, addressName, addressEmail),
-      Mail(mailTo, mailParts) )
+  ( Address(Address, addressEmail, addressName)
+  , Mail(mailParts, mailTo)
+  , plainPart
+  )
 import RIO
-    ( fst,
-      otherwise,
-      ($),
-      Eq((==), (/=)),
-      Monad(return),
-      Applicative(pure),
-      Bool(..),
-      Int,
-      Maybe(..),
-      IO,
-      Either(Right),
-      (.),
-      any,
-      (<$>),
-      Text,
-      unless,
-      readTVar,
-      writeTVar,
-      encodeUtf8,
-      atomically )
+  ( Applicative(pure)
+  , Bool(..)
+  , Either(Right)
+  , Eq((/=), (==))
+  , IO
+  , Int
+  , Maybe(..)
+  , Monad(return)
+  , Text
+  , ($)
+  , (.)
+  , (<$>)
+  , any
+  , atomically
+  , encodeUtf8
+  , fst
+  , otherwise
+  , readTVar
+  , unless
+  , writeTVar
+  )
 import qualified RIO.HashMap as HM
 import qualified RIO.Text as T
 import qualified RIO.Text.Lazy as TL
-import System.Random.Stateful
-    ( genByteString, applyAtomicGen, globalStdGen )
-import Yesod.Core ( MonadIO(..), getYesod )
-import Yesod.Form ( textField, ireq, runInputPost )
+import System.Random.Stateful (applyAtomicGen, genByteString, globalStdGen)
+import Yesod.Core (MonadIO(..), getYesod)
+import Yesod.Form (ireq, runInputPost, textField)
 
 cxuServiloEkzist :: ResolvSeed -> Domain -> IO Bool
 cxuServiloEkzist sem dom =

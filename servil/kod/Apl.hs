@@ -1,64 +1,69 @@
 {-# OPTIONS_GHC -Wno-orphans -Wno-unused-top-binds #-}
 
-import Auxtent ( postAuxtent )
+import Auxtent (postAuxtent)
 import qualified Data.ByteString as ByteString
-import Data.Maybe ( fromJust )
-import Database.MongoDB.Connection ( defaultPort )
+import Data.Maybe (fromJust)
+import Database.MongoDB.Connection (defaultPort)
 import Database.Persist.MongoDB
-    ( createMongoDBPool,
-      defaultConnectionIdleTime,
-      defaultPoolStripes,
-      defaultStripeConnections )
-import Datum ( Servil(..) )
-import Lingvar ( legLingv, getLingvar )
+  ( createMongoDBPool
+  , defaultConnectionIdleTime
+  , defaultPoolStripes
+  , defaultStripeConnections
+  )
+import Datum (Servil(..))
+import Lingvar (getLingvar, legLingv)
 import Network.DNS
-    ( makeResolvSeed,
-      defaultResolvConf,
-      ResolvConf(resolvTimeout),
-      ResolvSeed )
+  ( ResolvConf(resolvTimeout)
+  , ResolvSeed
+  , defaultResolvConf
+  , makeResolvSeed
+  )
 import Network.Mail.Mime
-    ( emptyMail,
-      renderMail',
-      sendmailCustom,
-      Address(Address, addressName, addressEmail),
-      Mail(mailHeaders) )
+  ( Address(Address, addressEmail, addressName)
+  , Mail(mailHeaders)
+  , emptyMail
+  , renderMail'
+  , sendmailCustom
+  )
 import RIO
-    ( filter,
-      ($),
-      Eq(..),
-      Monad((>>=), return),
-      Read,
-      Show,
-      Applicative(pure),
-      Foldable(elem),
-      Char,
-      Maybe(Nothing, Just),
-      IO,
-      FilePath,
-      (.),
-      (&&),
-      not,
-      (<$>),
-      dropWhile,
-      Text,
-      newTVarIO )
+  ( Applicative(pure)
+  , Char
+  , Eq(..)
+  , FilePath
+  , Foldable(elem)
+  , IO
+  , Maybe(Just, Nothing)
+  , Monad((>>=), return)
+  , Read
+  , Show
+  , Text
+  , ($)
+  , (&&)
+  , (.)
+  , (<$>)
+  , dropWhile
+  , filter
+  , newTVarIO
+  , not
+  )
 import qualified RIO.HashMap as HM
 import qualified RIO.Text as T
 import qualified RIO.Text.Partial as TP
 import qualified System.FilePath as FilePath
-import System.Which ( which )
+import System.Which (which)
 import Yesod
-    ( PathPiece(..),
-      defaultErrorHandler,
-      warp,
-      respond,
-      sendFile,
-      mkYesod,
-      parseRoutes,
-      Yesod(errorHandler),
-      ContentType,
-      ErrorResponse(InvalidArgs),
-      RenderRoute(renderRoute) )
+  ( ContentType
+  , ErrorResponse(InvalidArgs)
+  , PathPiece(..)
+  , RenderRoute(renderRoute)
+  , Yesod(errorHandler)
+  , defaultErrorHandler
+  , mkYesod
+  , parseRoutes
+  , respond
+  , sendFile
+  , warp
+  )
 import qualified Yesod.Core.Content as YesCont
 
 -- FARENDE: Agordaro por retpoŝtadreso de sendanto.

@@ -1,56 +1,57 @@
 module Lingvar where
 
-import Control.Monad.Logger as Log
-    ( logError, logWarn )
+import Control.Monad.Logger as Log (logError, logWarn)
 import Data.Aeson (decode, decode')
-import Data.Type.Nat ( SNatI )
+import Data.Type.Nat (SNatI)
 import qualified Data.Vec.DataFamily.SpineStrict as Vec
 import Datum
-    ( Traktil,
-      Servil(akirLingvDat),
-      LingvDatum(..),
-      LingvMankoj,
-      Lingvo,
-      ServilErar(TradukErar),
-      ApiRespond,
-      KrudaJson(UnsafeKrudaJson),
-      sukc,
-      servilErar,
-      finiFrue )
+  ( ApiRespond
+  , KrudaJson(UnsafeKrudaJson)
+  , LingvDatum(..)
+  , LingvMankoj
+  , Lingvo
+  , Servil(akirLingvDat)
+  , ServilErar(TradukErar)
+  , Traktil
+  , finiFrue
+  , servilErar
+  , sukc
+  )
 import RIO
-    ( (++),
-      snd,
-      otherwise,
-      ($),
-      Integral(toInteger),
-      Monad((>>=)),
-      Functor(fmap),
-      Ord((<)),
-      Applicative(pure, (<*>), liftA2),
-      Foldable(foldl'),
-      Traversable(sequence),
-      Semigroup((<>)),
-      Bool(True),
-      Maybe(..),
-      IO,
-      FilePath,
-      (.),
-      error,
-      Alternative((<|>)),
-      (<$>),
-      Text,
-      HashMap,
-      (&),
-      (<&>),
-      catMaybes,
-      fromMaybe,
-      tshow,
-      HashSet )
+  ( Alternative((<|>))
+  , Applicative((<*>), liftA2, pure)
+  , Bool(True)
+  , FilePath
+  , Foldable(foldl')
+  , Functor(fmap)
+  , HashMap
+  , HashSet
+  , IO
+  , Integral(toInteger)
+  , Maybe(..)
+  , Monad((>>=))
+  , Ord((<))
+  , Semigroup((<>))
+  , Text
+  , Traversable(sequence)
+  , ($)
+  , (&)
+  , (++)
+  , (.)
+  , (<$>)
+  , (<&>)
+  , catMaybes
+  , error
+  , fromMaybe
+  , otherwise
+  , snd
+  , tshow
+  )
 import RIO.ByteString.Lazy (readFile)
 import qualified RIO.HashMap as HM
 import qualified RIO.HashSet as HS
 import qualified RIO.Text as T
-import Yesod.Core ( MonadIO(..), getYesod, languages, MonadLogger )
+import Yesod.Core (MonadIO(..), MonadLogger, getYesod, languages)
 
 legLingv :: IO LingvDatum
 legLingv = do
@@ -62,20 +63,28 @@ legLingv = do
     fromJust (Just x) = x
     fromJust Nothing = error "Failed to load `mank.json` & `eo.json`."
 
+class Monad m =>
+      RaportMank m
+  where
+  raportMank :: Text -> m ()
+
+instance RaportMank Traktil where
+  raportMank t =
+    languages >>= \l ->
+      $(Log.logWarn) $
+      t <> " in languages " <> tshow l <> ", fallback to Esperanto"
+
 tradukDos ::
-     MonadLogger m
+     (RaportMank m)
   => LingvMankoj
   -> [Lingvo]
   -> HashSet Text
   -> m [(HashSet Text, FilePath)]
-tradukDos mankMap orlingvoj = tradukDos' orlingvoj
+tradukDos mankMap = tradukDos'
   where
     tradukDos' [] (HS.null -> True) = pure []
     tradukDos' [] p = do
-      $(Log.logWarn) $
-        "Translation(s) not found for " <>
-        tshow p <>
-        " in languages " <> tshow orlingvoj <> ", fallback to Esperanto"
+      raportMank $ "Translation(s) not found for " <> tshow p
       pure [(p, lingvDos "eo")]
     tradukDos' (l:ls) peto
       | Just mankoj <- HM.lookup l mankMap =
@@ -88,13 +97,11 @@ tradukDos mankMap orlingvoj = tradukDos' orlingvoj
 lingvDos :: Text -> FilePath
 lingvDos lin = "lingvar/" ++ T.unpack lin ++ ".json"
 
-cxioTradukDos :: MonadLogger m => LingvMankoj -> [Lingvo] -> m [FilePath]
-cxioTradukDos mankMap orlingvoj = cxio' orlingvoj
+cxioTradukDos :: RaportMank m => LingvMankoj -> [Lingvo] -> m [FilePath]
+cxioTradukDos mankMap = cxio'
   where
     cxio' [] = do
-      $(Log.logWarn) $
-        "No translation(s) at all found in " <>
-        tshow orlingvoj <> ", fallback to Esperanto"
+      raportMank "No translation(s) at all found"
       pure [lingvDos "eo"]
     cxio' (l:ls)
       | Just mankoj <- HM.lookup l mankMap =
@@ -128,7 +135,7 @@ getLingvar = do
               dosjAnalizitaj)
 
 krudTradukoj ::
-     (MonadLogger m, MonadIO m)
+     (MonadLogger m, RaportMank m, MonadIO m)
   => LingvMankoj
   -> [Lingvo]
   -> HashSet Text

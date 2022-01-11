@@ -114,11 +114,12 @@ data Respond v
   | KlientErar KlientErar
   deriving (Generic)
 
-data ServilErar = TradukErar
+data ServilErar =
+  TradukErar
   deriving (Generic)
 
-data KlientErar =
-    MalgxustaRetposxtErar
+data KlientErar
+  = MalgxustaRetposxtErar
   | DomajnoNeEkzistasErar
   | Stub ()
   deriving (Generic)
