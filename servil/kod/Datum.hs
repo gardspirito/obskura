@@ -34,7 +34,7 @@ import RIO
   , ($)
   , (<$>)
   , absurd
-  , error
+  , error, (.)
   )
 import qualified RIO.ByteString.Lazy as BSL
 import Yesod
@@ -84,16 +84,11 @@ instance YesodPersist Servil where
 jsLeg :: (MonadIO m, FromJSON a) => FilePath -> m (Maybe a)
 jsLeg dosNomo = decode' <$> BSL.readFile dosNomo
 
-share
-  [mkPersist (mkPersistSettings (ConT ''MongoContext))]
-  [persistLowerCase|
-Uzant
-  retposxt Text
-  UnikRetposxt retposxt
-|]
-
 newtype KrudaJson =
   UnsafeKrudaJson BSL.ByteString
+
+unsafeKrudaRespond :: BSL.ByteString -> Traktil (ApiRespond v)
+unsafeKrudaRespond = sendStatusJSON status200 . UnsafeKrudaJson
 
 instance ToJSON KrudaJson where
   toJSON _ = error "KrudaJson is not supposed to be used this way"
@@ -108,25 +103,6 @@ instance ToContent (ApiRespond v) where
 instance ToTypedContent (ApiRespond v) where
   toTypedContent (ApiRespond v) = absurd v
 
-data Respond v
-  = Sukc v
-  | ServilErar ServilErar
-  | KlientErar KlientErar
-  deriving (Generic)
-
-data ServilErar =
-  TradukErar
-  deriving (Generic)
-
-data KlientErar
-  = MalgxustaRetposxtErar
-  | DomajnoNeEkzistasErar
-  | Stub ()
-  deriving (Generic)
-
-instance ToJSON ServilErar where
-  toEncoding = genericToEncoding defaultOptions
-
 instance ToJSON KlientErar where
   toEncoding = genericToEncoding defaultOptions
 
@@ -136,11 +112,31 @@ instance ToJSON v => ToJSON (Respond v) where
 sukc :: ToJSON v => v -> Traktil (ApiRespond v)
 sukc v = sendStatusJSON status200 (Sukc v)
 
-servilErar :: ServilErar -> Traktil (ApiRespond v)
-servilErar erar = sendStatusJSON status500 (ServilErar erar :: Respond ())
+servilErar :: Traktil (ApiRespond v)
+servilErar = sendStatusJSON status500 (ServilErar :: Respond ())
 
 klientErar :: KlientErar -> Traktil (ApiRespond v)
 klientErar erar = sendStatusJSON status400 (KlientErar erar :: Respond ())
 
-finiFrue :: ApiRespond a -> b
-finiFrue (ApiRespond x) = absurd x
+malpurRaporti :: ApiRespond a -> b
+malpurRaporti (ApiRespond v) = absurd v
+
+data Respond v
+  = Sukc v
+  | ServilErar
+  | KlientErar KlientErar
+  deriving (Generic)
+
+data KlientErar
+  = MalgxustaRetposxtErar
+  | DomajnoNeEkzistasErar
+  | ErarojAnkauxPovasHaviKorpon_ ()
+  deriving (Generic)
+
+share
+  [mkPersist (mkPersistSettings (ConT ''MongoContext))]
+  [persistLowerCase|
+Uzant
+  retposxt Text
+  UnikRetposxt retposxt
+|]

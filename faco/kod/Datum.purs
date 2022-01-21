@@ -1,22 +1,21 @@
 module Datum
   ( Erar(..)
+  , Eraril
   , HHTML
   , KlientErar(..)
-  , Tradukil
   , ServilErar(..)
-  , Tradukenda(..)
+  , Tradukil
   , fapl
   , fdevas
   , fen
   , fperm
   , mapErar
   , petKern
-  , skrKErar
   , setigi
+  , skrKErar
   , striktAlfabet
   ) where
 
-import Safe.Coerce
 import Affjax as Affj
 import Affjax.RequestBody as Affj.Pet
 import Affjax.ResponseFormat as Affj.Resp
@@ -38,18 +37,19 @@ import Effect.Class (class MonadEffect, liftEffect)
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.Hooks as HK
-import Prelude (Unit, bind, pure, ($), (<#>), (<$>), (<<<), (<>), (>>>))
+import Prelude (class Eq, class Ord, Unit, bind, pure, ($), (<#>), (<$>), (<<<), (<>), (>>>))
 import Web.Event.Event (Event, EventType(..))
 
 type Tradukil
-  = forall x. Coercible x Tradukenda => x -> String
+  = String -> String
 
 type HHTML m uz
   = forall w. HK.Hook m uz (HH.HTML w (HK.HookM m Unit))
 
+{-
 newtype Tradukenda
   = Tradukenda String
-
+-}
 fperm :: S.Set Char -> String -> Maybe String
 fperm p = fapl (toCharArray >>> filter (_ `S.member` p) >>> fromCharArray)
 
@@ -116,9 +116,9 @@ petKern method url v = do
   pure do
     jsonResp <- mapErar (sE <<< RetErar) $ kResp <#> \x -> x.body
     resp :: ApiMsg <-
-      mapErar (sE <<< JsonErar) $ decodeJson jsonResp
+      mapErar (sE <<< JsonErar jsonResp) $ decodeJson jsonResp
     case resp of
-      { tag: "Sukc", contents: Just dat } -> mapErar (sE <<< JsonErar) $ decodeJson dat
+      { tag: "Sukc", contents: Just dat } -> mapErar (sE <<< JsonErar jsonResp) $ decodeJson dat
       { tag: "ServilErar" } -> Left $ sE ServilEnaErar
       { tag: "KlientErar", contents: Just dat } -> case malkodiKlientErar dat of
         Left e -> Left $ ServilErar e
@@ -131,6 +131,9 @@ data Erar
   = KlientErar KlientErar
   | ServilErar ServilErar
 
+type Eraril
+  = Erar -> ∀ m. MonadAff m => HK.HookM m Unit
+
 data KlientErar
   = MalgxustaRetposxtErar
   | DomajnoNeEkzistasErar
@@ -138,21 +141,27 @@ data KlientErar
 data ServilErar
   = ServilEnaErar
   | RetErar Affj.Error
-  | JsonErar JsonDecodeError -- Fiaskis elanaizi servilan respondon.
+  | JsonErar Json JsonDecodeError -- Fiaskis elanaizi servilan respondon.
   | NekonataVarErar String (Maybe Json)
 
 derive instance genKE :: Generic KlientErar _
 
+derive instance eqKE :: Eq KlientErar
+
+derive instance ordKE :: Ord KlientErar
+
 malkodiKlientErar :: Json -> Either ServilErar KlientErar
-malkodiKlientErar erar = do
-  val :: ApiMsg <- mapErar JsonErar $ decodeJson erar
+malkodiKlientErar erarJson = do
+  val :: ApiMsg <- mapErar (JsonErar erarJson) $ decodeJson erarJson
   case val of
     { tag: "MalgxustaRetposxtErar" } -> Right $ MalgxustaRetposxtErar
     { tag: "DomajnoNeEkzistasErar" } -> Right $ DomajnoNeEkzistasErar
     { tag, contents } -> Left $ NekonataVarErar tag contents
 
 -- | Priskribi klientan eraron
-skrKErar :: Tradukil -> KlientErar -> String
-skrKErar trd = case _ of
-  MalgxustaRetposxtErar -> trd "erar.klient.malgxusta-retposxt"
-  DomajnoNeEkzistasErar -> trd "erar.klient.domajno-ne-ekzistas"
+skrKErar :: KlientErar -> Tradukil -> String
+skrKErar erar trd =
+  trd
+    $ case erar of
+        MalgxustaRetposxtErar -> "erar.klient.malgxusta-retposxt"
+        DomajnoNeEkzistasErar -> "erar.klient.domajno-ne-ekzistas"

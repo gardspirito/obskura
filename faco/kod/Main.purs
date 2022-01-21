@@ -2,8 +2,7 @@ module Main
   ( erarList
   , komp
   , main
-  )
-  where
+  ) where
 
 import Affjax as Affj
 import Data.Argonaut.Core (stringify)
@@ -17,7 +16,7 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Show.Generic (genericShow)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\), type (/\))
-import Datum (Erar(..), ServilErar(..), Tradukenda(..), Tradukil, petKern, skrKErar)
+import Datum (Erar(..), ServilErar(..), Tradukil, Eraril, petKern, skrKErar)
 import Effect (Effect)
 import Effect.Aff (Milliseconds(..), delay)
 import Effect.Aff.Class (class MonadAff, liftAff)
@@ -57,7 +56,7 @@ komp =
         Left erar -> erarilo erar
         Right nlin -> HK.put linId $ HM.fromFoldable (toArrayWithKey Tuple nlin)
       pure Nothing
-    menuH <- UzMenu.komp trd
+    menuH <- UzMenu.komp erarilo trd
     HK.pure
       $ HH.div
           [ HP.id "supr"
@@ -76,21 +75,23 @@ type UzErarList
 type ErarElem
   = { elem :: Erar, morto :: Ref.Ref (Maybe Int) }
 
-erarList :: ∀ m w. MonadAff m => Tradukil -> HK.Hook m UzErarList ((Erar -> HK.HookM m Unit) /\ (HH.HTML w (HK.HookM m Unit)))
+erarList :: ∀ m w. MonadAff m => Tradukil -> HK.Hook m UzErarList (Eraril /\ (HH.HTML w (HK.HookM m Unit)))
 erarList trd = HK.do
   stat /\ statId <- HK.useState M.empty
   _ /\ nombril <- HK.useState 0
   HK.pure
-    $ ( \erar -> do
-          liftEffect $ raportiErar erar
-          nombro <- HK.modify nombril (_ + 1)
-          ref <- liftEffect $ Ref.new (Just 0)
-          HK.modify_ statId (M.insert nombro { elem: erar, morto: ref })
-          _ <-
-            fork do
-              liftAff $ atendMorton ref
-              HK.modify_ statId (M.delete nombro)
-          pure unit
+    $ ( ( \erar -> do
+            liftEffect $ raportiErar erar
+            nombro <- HK.modify nombril (_ + 1)
+            ref <- liftEffect $ Ref.new (Just 0)
+            HK.modify_ statId (M.insert nombro { elem: erar, morto: ref })
+            _ <-
+              fork do
+                liftAff $ atendMorton ref
+                HK.modify_ statId (M.delete nombro)
+            pure unit
+        ) ::
+          Eraril
       )
     /\ HH.div
         [ HP.id "erar-list" ]
@@ -130,10 +131,10 @@ erarList trd = HK.do
         /\ ( case serar of
               ServilEnaErar -> [ htrd "erar.servil.ena", HH.em [ HP.class_ KL.etaTekst ] $ [ htrd "erar.servil.ena.sub" ] ] -- Farende: Malgranda
               RetErar erar -> [ htrd "erar.servil.ret", HH.br_, HH.text $ Affj.printError erar ]
-              JsonErar erar -> [ htrd "erar.servil.malkod", HH.br_, HH.text $ printJsonDecodeError erar ]
-              NekonataVarErar tag contents -> [ htrd "erar.servil.nekonata-var", HH.br_, HH.text tag, HH.text $ show $ stringify <$> contents ]
+              JsonErar _ erar -> [ htrd "erar.servil.malkod", HH.br_, HH.text $ printJsonDecodeError erar ]
+              NekonataVarErar tag _ -> [ htrd "erar.servil.nekonata-var", HH.br_, HH.text tag]
           )
-    KlientErar erar -> trd "erar.klient" /\ [ HH.text $ skrKErar trd erar ]
+    KlientErar erar -> trd "erar.klient" /\ [ HH.text $ skrKErar erar trd ]
     where
     htrd = HH.text <<< trd
 
@@ -144,6 +145,6 @@ erarList trd = HK.do
           ServilErar serar -> case serar of
             ServilEnaErar -> "Server reported internal error"
             RetErar erar -> "Error while attemping to perform Affjax request:\n" <> Affj.printError erar
-            JsonErar erar -> "Failed to parse server response as JSON:\n" <> printJsonDecodeError erar
+            JsonErar json erar -> "Failed to parse server response as JSON:\n" <> printJsonDecodeError erar <> "\n" <> stringify json
             NekonataVarErar tag contents -> "Server responded with unknown response \"" <> tag <> "\":\n" <> (fromMaybe "[... no body provided ...]" $ stringify <$> contents)
           KlientErar x -> genericShow x

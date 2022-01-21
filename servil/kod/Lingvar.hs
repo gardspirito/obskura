@@ -6,16 +6,13 @@ import Data.Type.Nat (SNatI)
 import qualified Data.Vec.DataFamily.SpineStrict as Vec
 import Datum
   ( ApiRespond
-  , KrudaJson(UnsafeKrudaJson)
   , LingvDatum(..)
   , LingvMankoj
   , Lingvo
   , Servil(akirLingvDat)
-  , ServilErar(TradukErar)
   , Traktil
-  , finiFrue
   , servilErar
-  , sukc
+  , sukc, unsafeKrudaRespond
   )
 import RIO
   ( Alternative((<|>))
@@ -116,10 +113,10 @@ getLingvar = do
   traduk <- cxioTradukDos (lingvMankoj lingvDatum) lingvoj
   case traduk of
     [] -> do
-      servilErar TradukErar
+      servilErar
     [unu] -> do
       dosEnhavo <- readFile unu
-      finiFrue <$> sukc (UnsafeKrudaJson dosEnhavo)
+      unsafeKrudaRespond dosEnhavo
     multe -> do
       dosjEnhavo <- sequence (readFile <$> multe)
       let dosjAnalizitaj =

@@ -6,48 +6,65 @@ module UzantMenu
 import DOM.HTML.Indexed.InputType (InputType(InputText))
 import Data.Array (filter, length, all)
 import Data.Either (Either(..))
+import Data.Foldable (elem)
 import Data.HTTP.Method (Method(..))
+import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..))
 import Data.String.CodeUnits as S
 import Data.String.Common (split, toLower)
 import Data.Tuple.Nested ((/\))
-import Datum (Erar(..), HHTML, Tradukil, Tradukenda(..), fapl, fdevas, fen, fperm, petKern, setigi, striktAlfabet)
+import Datum (Erar(..), HHTML, KlientErar(..), Tradukil, Eraril, fapl, fdevas, fen, fperm, petKern, setigi, skrKErar, striktAlfabet)
 import Effect.Aff.Class (class MonadAff)
 import Halogen.HTML as HH
+import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.Hooks (type (<>))
 import Halogen.Hooks as HK
-import Prelude (($), (>=>), (==), (<), (>>>), (<>), (>=), (&&))
+import Prelude (bind, const, when, ($), (&&), (<), (<>), (==), (>=), (>=>), (>>>))
+import Web.UIEvent.KeyboardEvent as KeyboardEvent
 
 data Stat
-  = Aux { retposxt :: String }
+  = Aux { retposxt :: String, erar :: Maybe (Tradukil -> String) }
   | Sukc
 
 type UzMenu
   = HK.UseState Stat <> HK.Pure
 
-komp ∷ ∀ m. MonadAff m => Tradukil -> HHTML m UzMenu
-komp trd = HK.do
-  stat /\ statId <- HK.useState $ Aux { retposxt: "" }
+komp ∷ ∀ m. MonadAff m => Eraril -> Tradukil -> HHTML m UzMenu
+komp eraril trd = HK.do
+  stat /\ statId <- HK.useState $ Aux { retposxt: "", erar: Nothing }
   HK.pure
     $ HH.div
         [ HP.id "uzant-menu"
         ] case stat of
         Aux orstat@{ retposxt } ->
-          [ HH.text $ trd "aux.auxtentigxo"
-          , HH.input
-              [ HP.type_ InputText
-              , HP.placeholder (trd "aux.retposxt")
-              , fen
-                  (fdevas (kalkDe '@' >>> (_ < 2)) >=> fapl toLower >=> fperm (striktAlfabet <> setigi "@"))
-                  (\adr -> HK.put statId $ Aux $ orstat { retposxt = adr })
-              ]
-          , HH.button
-              [ HP.enabled $ verigiAdr retposxt
-              --, HP.onClick 
-              ]
-              [ HH.text $ trd "aux.ensalutu" ]
-          ]
+          let
+            veraAdr = verigiAdr retposxt
+
+            sendi = do
+              resp <- petKern (Left POST) "ensaluti" { retposxt: retposxt }
+              case resp of
+                Left (KlientErar erar)
+                  | erar `elem` [ MalgxustaRetposxtErar, DomajnoNeEkzistasErar ] -> HK.put statId $ Aux $ orstat { erar = Just $ skrKErar erar }
+                Left n -> eraril n
+                Right (_ :: {}) -> HK.put statId $ Sukc
+          in
+            [ HH.text $ trd "aux.auxtentigxo"
+            , HH.input
+                [ HP.type_ InputText
+                , HP.placeholder (trd "aux.retposxt")
+                , fen
+                    (fdevas (kalkDe '@' >>> (_ < 2)) >=> fapl toLower >=> fperm (striktAlfabet <> setigi "@"))
+                    (\adr -> HK.put statId $ Aux $ orstat { retposxt = adr })
+                , HE.onKeyDown
+                    $ \event -> when (veraAdr && KeyboardEvent.code event == "Enter") sendi
+                ]
+            , HH.button
+                [ HP.enabled $ veraAdr
+                , HE.onClick $ const sendi
+                ]
+                [ HH.text $ trd "aux.ensalutu" ]
+            ]
         Sukc -> []
   where
   kalkDe liter = S.toCharArray >>> filter (_ == liter) >>> length

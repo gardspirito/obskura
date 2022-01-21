@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-deferred-out-of-scope-variables #-}
 module Auxtent where
 
 import Data.ByteString.Base64.URL (encodeBase64)
@@ -7,9 +8,8 @@ import Datum
   , KlientErar(DomajnoNeEkzistasErar, MalgxustaRetposxtErar)
   , Servil(akirDNSSem, akirSalutant, posxtu)
   , Traktil
-  , finiFrue
   , klientErar
-  , sukc
+  , sukc, malpurRaporti
   )
 import Lingvar (kajtpet, tKuntDe, tpet, tpetPartoj, traduki)
 import Network.DNS (Domain, ResolvSeed, lookupMX, withResolver)
@@ -60,10 +60,10 @@ cxuServiloEkzist sem dom =
 postAuxtent :: Traktil (ApiRespond ())
 postAuxtent = do
   retposxt <- runInputPost (ireq textField "retposxt")
-  domajn <- akirDomajn retposxt
+  domajn <- maybe (malpurRaporti <$> klientErar DomajnoNeEkzistasErar) pure (akirDomajn retposxt)
   servil <- getYesod
   cxuEkz <- liftIO $ cxuServiloEkzist (akirDNSSem servil) $ encodeUtf8 domajn
-  unless cxuEkz (finiFrue <$> klientErar DomajnoNeEkzistasErar)
+  unless cxuEkz (malpurRaporti <$> klientErar MalgxustaRetposxtErar )
   kod <- registriSalut servil Nothing
   (tsal, (tsubj, t1 ::: t2 ::: t3 ::: t4 ::: VNil)) <-
     traduki $
@@ -99,8 +99,8 @@ postAuxtent = do
   sukc ()
   where
     akirDomajn r
-      | [_, dom] <- T.split (== '@') r = pure dom
-      | otherwise = finiFrue <$> klientErar MalgxustaRetposxtErar
+      | [_, dom] <- T.split (== '@') r = Just dom
+      | otherwise = Nothing
     registriSalut :: MonadIO m => Servil -> Maybe Int -> m Text
     registriSalut (akirSalutant -> salutant) iden = registri'
       where
