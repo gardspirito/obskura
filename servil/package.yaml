@@ -63,4 +63,5 @@ executables:
     - -XDeriveGeneric
     - -XBlockArguments
     - -XPatternSynonyms
+    - -XRankNTypes
 

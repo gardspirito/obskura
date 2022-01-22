@@ -1,6 +1,8 @@
 {-# OPTIONS_GHC -Wno-deferred-out-of-scope-variables #-}
+
 module Auxtent where
 
+import Data.Aeson (FromJSON)
 import Data.ByteString.Base64.URL (encodeBase64)
 import Data.Vec.DataFamily.SpineStrict (Vec((:::), VNil))
 import Datum
@@ -8,8 +10,11 @@ import Datum
   , KlientErar(DomajnoNeEkzistasErar, MalgxustaRetposxtErar)
   , Servil(akirDNSSem, akirSalutant, posxtu)
   , Traktil
+  , akirPet
+  , auFrue
   , klientErar
-  , sukc, malpurRaporti
+  , malpurRaporti
+  , sukc
   )
 import Lingvar (kajtpet, tKuntDe, tpet, tpetPartoj, traduki)
 import Network.DNS (Domain, ResolvSeed, lookupMX, withResolver)
@@ -23,6 +28,7 @@ import RIO
   , Bool(..)
   , Either(Right)
   , Eq((/=), (==))
+  , Generic
   , IO
   , Int
   , Maybe(..)
@@ -35,6 +41,7 @@ import RIO
   , atomically
   , encodeUtf8
   , fst
+  , maybe
   , otherwise
   , readTVar
   , unless
@@ -45,7 +52,6 @@ import qualified RIO.Text as T
 import qualified RIO.Text.Lazy as TL
 import System.Random.Stateful (applyAtomicGen, genByteString, globalStdGen)
 import Yesod.Core (MonadIO(..), getYesod)
-import Yesod.Form (ireq, runInputPost, textField)
 
 cxuServiloEkzist :: ResolvSeed -> Domain -> IO Bool
 cxuServiloEkzist sem dom =
@@ -57,13 +63,26 @@ cxuServiloEkzist sem dom =
           | any ((/= ".") . fst) x -> True
         _ -> False
 
+newtype AuxtentPet =
+  AuxtentPet
+    { retposxt :: Text
+    }
+  deriving (Generic)
+
+instance FromJSON AuxtentPet
+
 postAuxtent :: Traktil (ApiRespond ())
 postAuxtent = do
-  retposxt <- runInputPost (ireq textField "retposxt")
-  domajn <- maybe (malpurRaporti <$> klientErar DomajnoNeEkzistasErar) pure (akirDomajn retposxt)
+  pet <- auFrue akirPet
+  let uzRetposxt = retposxt pet
+  domajn <-
+    maybe
+      (malpurRaporti <$> klientErar DomajnoNeEkzistasErar)
+      pure
+      (akirDomajn uzRetposxt)
   servil <- getYesod
   cxuEkz <- liftIO $ cxuServiloEkzist (akirDNSSem servil) $ encodeUtf8 domajn
-  unless cxuEkz (malpurRaporti <$> klientErar MalgxustaRetposxtErar )
+  unless cxuEkz (malpurRaporti <$> klientErar MalgxustaRetposxtErar)
   kod <- registriSalut servil Nothing
   (tsal, (tsubj, t1 ::: t2 ::: t3 ::: t4 ::: VNil)) <-
     traduki $
@@ -76,7 +95,8 @@ postAuxtent = do
       tsubj
       (\malplena ->
          malplena
-           { mailTo = [Address {addressName = Nothing, addressEmail = retposxt}]
+           { mailTo =
+               [Address {addressName = Nothing, addressEmail = uzRetposxt}]
            , mailParts =
                [ [ plainPart $
                    TL.fromStrict $

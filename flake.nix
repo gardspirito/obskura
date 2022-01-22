@@ -41,6 +41,8 @@
               cp index.js ../stat/kern.js
             '')
             (pkgs.writeShellScriptBin "servil" ''
+              hindent kod/*
+              hlint kod/*
               stack run --cwd ..
             '')
             haskellPackages.hlint

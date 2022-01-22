@@ -28,6 +28,7 @@ to generate this file without the comments in this block.
   , "functions"
   , "halogen"
   , "halogen-hooks"
+  , "halogen-svg-elems"
   , "http-methods"
   , "maybe"
   , "ordered-collections"

@@ -10,8 +10,8 @@
   "aux.krei-konton.uzantnomo": "Имя пользователя",
   "aux.krei-konton.uzantpri": "Расскажите о себе, если желаете",
   "aux.retposxt": "email@domain.com",
-  "aux.sukces1": "Запрос на вход выполнен!",
-  "aux.sukces2": "Скоро Вы получите письмо",
+  "aux.sukces.1": "Запрос на вход выполнен!",
+  "aux.sukces.2": "Скоро Вы получите письмо",
   "aux.vizitu": "Возможно, Вам стоит посетить",
   "erar.konekt": "Невозможно подключиться к серверу"
 }

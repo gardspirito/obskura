@@ -12,7 +12,8 @@ import Datum
   , Servil(akirLingvDat)
   , Traktil
   , servilErar
-  , sukc, unsafeKrudaRespond
+  , sukc
+  , unsafeKrudaRespond
   )
 import RIO
   ( Alternative((<|>))

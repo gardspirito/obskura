@@ -1,6 +1,7 @@
 module Datum where
 
-import Data.Aeson (decode', defaultOptions, genericToEncoding)
+import Data.Aeson (FromJSON, ToJSON, decode', defaultOptions, genericToEncoding)
+import qualified Data.Aeson as Aeson
 import Data.Aeson.Encoding (unsafeToEncoding)
 import Data.Binary.Builder (fromLazyByteString)
 import Database.Persist.MongoDB
@@ -20,7 +21,8 @@ import Network.DNS (ResolvSeed)
 import Network.HTTP.Types (status200, status400, status500)
 import Network.Mail.Mime (Mail)
 import RIO
-  ( FilePath
+  ( Either(..)
+  , FilePath
   , Generic
   , HashMap
   , HashSet
@@ -29,17 +31,23 @@ import RIO
   , Maybe
   , MonadIO
   , TVar
-  , Text
   , Void
   , ($)
+  , (.)
   , (<$>)
+  , (<&>)
+  , (>>=)
   , absurd
-  , error, (.)
+  , either
+  , error
+  , id
   )
 import qualified RIO.ByteString.Lazy as BSL
+import RIO.Prelude (pure)
+import qualified RIO.Text as T
+import RIO.Text
 import Yesod
   ( FormMessage
-  , FromJSON
   , HandlerFor
   , RenderMessage(..)
   , ToContent(..)
@@ -48,6 +56,7 @@ import Yesod
   , YesodPersist(..)
   , defaultFormMessage
   , getYesod
+  , parseCheckJsonBody
   , sendStatusJSON
   )
 
@@ -121,6 +130,15 @@ klientErar erar = sendStatusJSON status400 (KlientErar erar :: Respond ())
 malpurRaporti :: ApiRespond a -> b
 malpurRaporti (ApiRespond v) = absurd v
 
+auFrue :: Traktil (Either (ApiRespond a) a) -> Traktil a
+auFrue f = f <&> either malpurRaporti id
+
+akirPet :: FromJSON a => Traktil (Either (ApiRespond erar) a)
+akirPet =
+  parseCheckJsonBody >>= \case
+    Aeson.Success x -> pure $ Right x
+    Aeson.Error erar -> klientErar (PetErar $ T.pack erar) <&> Left
+
 data Respond v
   = Sukc v
   | ServilErar
@@ -130,6 +148,7 @@ data Respond v
 data KlientErar
   = MalgxustaRetposxtErar
   | DomajnoNeEkzistasErar
+  | PetErar Text
   | ErarojAnkauxPovasHaviKorpon_ ()
   deriving (Generic)
 

@@ -3,6 +3,8 @@ module UzantMenu
   , Stat
   ) where
 
+import Prelude (Unit, bind, const, pure, unit, ($), (&&), (<), (<#>), (<>), (==), (>=), (>=>), (>>>))
+
 import DOM.HTML.Indexed.InputType (InputType(InputText))
 import Data.Array (filter, length, all)
 import Data.Either (Either(..))
@@ -20,12 +22,12 @@ import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Halogen.Hooks (type (<>))
 import Halogen.Hooks as HK
-import Prelude (bind, const, when, ($), (&&), (<), (<>), (==), (>=), (>=>), (>>>))
+import Stil as Stil
 import Web.UIEvent.KeyboardEvent as KeyboardEvent
 
 data Stat
   = Aux { retposxt :: String, erar :: Maybe (Tradukil -> String) }
-  | Sukc
+  | Sukc { celloko :: String }
 
 type UzMenu
   = HK.UseState Stat <> HK.Pure
@@ -39,15 +41,13 @@ komp eraril trd = HK.do
         ] case stat of
         Aux orstat@{ retposxt } ->
           let
-            veraAdr = verigiAdr retposxt
-
-            sendi = do
+            msendi = verigiAdr retposxt <#> \analizita -> do
               resp <- petKern (Left POST) "ensaluti" { retposxt: retposxt }
               case resp of
                 Left (KlientErar erar)
                   | erar `elem` [ MalgxustaRetposxtErar, DomajnoNeEkzistasErar ] -> HK.put statId $ Aux $ orstat { erar = Just $ skrKErar erar }
                 Left n -> eraril n
-                Right (_ :: {}) -> HK.put statId $ Sukc
+                Right (_ :: Array Unit) -> HK.put statId $ Sukc analizita
           in
             [ HH.text $ trd "aux.auxtentigxo"
             , HH.input
@@ -57,70 +57,43 @@ komp eraril trd = HK.do
                     (fdevas (kalkDe '@' >>> (_ < 2)) >=> fapl toLower >=> fperm (striktAlfabet <> setigi "@"))
                     (\adr -> HK.put statId $ Aux $ orstat { retposxt = adr })
                 , HE.onKeyDown
-                    $ \event -> when (veraAdr && KeyboardEvent.code event == "Enter") sendi
+                    $ \event -> case KeyboardEvent.code event of
+                      "Enter" | Just sendi <- msendi -> sendi
+                      _ -> pure unit
                 ]
             , HH.button
-                [ HP.enabled $ veraAdr
-                , HE.onClick $ const sendi
-                ]
+                (
+                  case msendi of
+                    Just sendi -> [ HE.onClick $ const sendi ]
+                    Nothing -> [ HP.disabled true ]
+                )
                 [ HH.text $ trd "aux.ensalutu" ]
             ]
-        Sukc -> []
+        Sukc { celloko } -> [
+          HH.text $ trd "aux.sukces.1"
+        , HH.br_
+        , HH.text $ trd "aux.sukces.2"
+        , HH.br_
+        , Stil.sukcSign
+        , HH.br_
+        , HH.text $ trd "aux.vizitu"
+        , HH.text " "
+        , HH.a [ HP.href ("https://" <> celloko )] [ HH.text $ celloko ]
+        ]
   where
   kalkDe liter = S.toCharArray >>> filter (_ == liter) >>> length
 
   verigiAdr adr
-    | [ un, du ] <- split (Pattern "@") adr = S.length un >= 1 && kalkDe '.' du >= 1 && verigiDu du
+    | [ un, du ] <- split (Pattern "@") adr = 
+        if S.length un >= 1 && kalkDe '.' du >= 1 && verigiDu du
+          then Just $ { celloko: du }
+          else Nothing
       where
       verigiDu = split (Pattern ".") >>> all (\domajnpart -> S.length domajnpart >= 2)
 
-  verigiAdr _ = false
+  verigiAdr _ = Nothing
 
 {-
-
-montrUzantMenu : { a | nunaAgo : Maybe Model, l : Translations } -> List (Html Msg)
-montrUzantMenu m =
-    case m.nunaAgo of
-        Nothing ->
-            []
-
-        Just mod ->
-            [ div [ id "uzant-menu", nePropaguKlak ] <|
-                case mod of
-                    AuxMod { adr, erar, respAtend } ->
-                        let
-                            sxerc =
-                                adr == L.auxRetposxt m.l
-
-                            erarN =
-                                if sxerc then
-                                    L.auxJamvidis m.l
-
-                                else
-                                    erar
-                        in
-                        [ text <| L.auxAuxtentigxo m.l
-                        , input
-                            [ type_ "text"
-                            , placeholder <| L.auxRetposxt m.l
-                            , disabled respAtend
-                            , value adr
-                            , onInput (NunaAgoMsg << AuxMsg << AuxAdr)
-                            ]
-                            []
-                        , button
-                            [ disabled <| sxerc || (not <| cxuVeraAdr adr)
-                            , onClick (NunaAgoMsg <| AuxMsg AuxEnsalutu)
-                            ]
-                            [ text <| L.auxEnsalutu m.l ]
-                        ]
-                            ++ (if erarTekst /= "" then
-                                    [ div [ class "erar" ] [ text erarTekst ] ]
-
-                                else
-                                    []
-                               )
-
                     AuxSukc celloko ->
                         [ text <| L.auxSukces1 m.l
                         , br [] []
