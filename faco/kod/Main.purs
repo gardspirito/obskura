@@ -1,7 +1,5 @@
 module Main
-  ( erarList
-  , komp
-  , main
+  ( main
   ) where
 
 import Affjax as Affj
@@ -21,6 +19,7 @@ import Effect (Effect)
 import Effect.Aff (Milliseconds(..), delay)
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Class (liftEffect)
+import Effect.Class.Console (log)
 import Effect.Console (error)
 import Effect.Ref as Ref
 import Foreign.Object (toArrayWithKey)
@@ -32,42 +31,53 @@ import Halogen.HTML.Properties as HP
 import Halogen.Hooks (type (<>), fork, useLifecycleEffect)
 import Halogen.Hooks as HK
 import Halogen.VDom.Driver (runUI)
-import Prelude (Unit, bind, discard, map, pure, show, unit, ($), (+), (<#>), (<<<), (<>), (>=), (<$>))
+import Prelude (Unit, bind, discard, map, pure, show, unit, ($), (+), (<#>), (<<<), (<>), (>=), (<$>), (>>=))
 import Safe.Coerce (coerce)
 import Stil as KL
+import Type.Proxy (Proxy(..))
 import UzantMenu as UzMenu
+import Web.HTML (window)
+import Web.HTML.Window (location)
 
 main :: Effect Unit
 main =
   HA.runHalogenAff do
     pagx <- HA.awaitBody
-    runUI komp unit pagx
+    loko <- liftEffect (window >>= location)
+    runUI kern loko pagx
 
-komp :: ∀ p en el m. MonadAff m => H.Component p en el m
-komp =
+kern :: ∀ p en el m. MonadAff m => H.Component p en el m
+kern =
   HK.component \_ _ -> HK.do
     linMap /\ linId <- HK.useState HM.empty
     let
       trd = (\p -> fromMaybe "[...]" (HM.lookup (coerce p) linMap)) :: Tradukil
-    erarilo /\ erarH <- erarList trd
+    eraril /\ erarH <- erarList trd
     useLifecycleEffect do
       respond <- petKern (Left GET) "lingvar" unit
       case respond of
-        Left erar -> erarilo erar
+        Left erar -> eraril erar
         Right nlin -> HK.put linId $ HM.fromFoldable (toArrayWithKey Tuple nlin)
       pure Nothing
-    menuH <- UzMenu.komp erarilo trd
     HK.pure
-      $ HH.div
-          [ HP.id "supr"
+      $ HH.div_ [
+        HH.slot_ (Proxy :: Proxy "regula") 0 regula {trd: trd, eraril: eraril }
+      , erarH
+      ]
+
+regula :: ∀ p el m. MonadAff m => H.Component p { trd :: Tradukil, eraril :: Eraril } el m
+regula = HK.component \_ { trd, eraril } -> HK.do
+  menuH <- UzMenu.komp eraril trd
+  HK.pure $
+    HH.div 
+      [ HP.id "supr"
+      ]
+      [ HH.div
+          [ HP.id "uzant"
           ]
-          [ HH.div
-              [ HP.id "uzant"
-              ]
-              [ menuH
-              ]
-          , erarH
+          [ menuH
           ]
+      ]
 
 type UzErarList
   = HK.UseState (M.Map Int ErarElem) <> HK.UseState Int <> HK.Pure
@@ -81,6 +91,7 @@ erarList trd = HK.do
   _ /\ nombril <- HK.useState 0
   HK.pure
     $ ( ( \erar -> do
+            liftEffect $ log "Hi?"
             liftEffect $ raportiErar erar
             nombro <- HK.modify nombril (_ + 1)
             ref <- liftEffect $ Ref.new (Just 0)

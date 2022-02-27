@@ -30,6 +30,8 @@ dependencies:
 - binary >= 0.8
 - vec >= 0.4
 - fin >= 0.2
+- time >= 1
+- bson >= 0.4
 
 executables:
   obskura:
@@ -64,4 +66,16 @@ executables:
     - -XBlockArguments
     - -XPatternSynonyms
     - -XRankNTypes
-
+    - -XAllowAmbiguousTypes
+    - -XTypeApplications
+    - -XScopedTypeVariables
+    - -XOverloadedLabels
+    - -XTypeOperators
+    - -XFlexibleContexts
+    - -XConstraintKinds
+    - -XImplicitParams
+    - -XDefaultSignatures
+    - -XDerivingVia
+    - -XQuantifiedConstraints
+    - -XPolyKinds
+    - -XStandaloneKindSignatures

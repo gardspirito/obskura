@@ -92,19 +92,3 @@ komp eraril trd = HK.do
       verigiDu = split (Pattern ".") >>> all (\domajnpart -> S.length domajnpart >= 2)
 
   verigiAdr _ = Nothing
-
-{-
-                    AuxSukc celloko ->
-                        [ text <| L.auxSukces1 m.l
-                        , br [] []
-                        , text <| L.auxSukces2 m.l
-                        , br [] []
-                        , signSukc
-                        , br [] []
-                        , text <| L.auxVizitu m.l
-                        , text " "
-                        , a [ href ("https://" ++ celloko) ] [ text celloko ]
-                        ]
-            ]
-
--}

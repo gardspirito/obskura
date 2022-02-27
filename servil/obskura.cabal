@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.34.6.
 --
 -- see: https://github.com/sol/hpack
 
@@ -22,17 +22,20 @@ executable obskura
   other-modules:
       Auxtent
       Datum
+      Datumbaz
       Lingvar
+      MongoKod
       Paths_obskura
   hs-source-dirs:
       kod
-  ghc-options: -Wall -O2 -fllvm -threaded -rtsopts -with-rtsopts=-N -XNoImplicitPrelude -XDataKinds -XDerivingStrategies -XFlexibleInstances -XGADTs -XGeneralisedNewtypeDeriving -XMultiParamTypeClasses -XOverloadedStrings -XQuasiQuotes -XStandaloneDeriving -XTemplateHaskell -XTypeFamilies -XUndecidableInstances -XViewPatterns -XOverloadedStrings -XMonadComprehensions -XTupleSections -XLambdaCase -XDeriveGeneric -XBlockArguments -XPatternSynonyms -XRankNTypes
+  ghc-options: -Wall -O2 -fllvm -threaded -rtsopts -with-rtsopts=-N -XNoImplicitPrelude -XDataKinds -XDerivingStrategies -XFlexibleInstances -XGADTs -XGeneralisedNewtypeDeriving -XMultiParamTypeClasses -XOverloadedStrings -XQuasiQuotes -XStandaloneDeriving -XTemplateHaskell -XTypeFamilies -XUndecidableInstances -XViewPatterns -XOverloadedStrings -XMonadComprehensions -XTupleSections -XLambdaCase -XDeriveGeneric -XBlockArguments -XPatternSynonyms -XRankNTypes -XAllowAmbiguousTypes -XTypeApplications -XScopedTypeVariables -XOverloadedLabels -XTypeOperators -XFlexibleContexts -XConstraintKinds -XImplicitParams -XDefaultSignatures -XDerivingVia -XQuantifiedConstraints -XPolyKinds -XStandaloneKindSignatures
   build-depends:
       aeson >=1
     , base >=4
     , base64 >=0.4
     , bifunctors >=5
     , binary >=0.8
+    , bson >=0.4
     , bytestring >=0.10
     , dns >=4
     , filepath >=1.4
@@ -47,6 +50,7 @@ executable obskura
     , random >=1.2
     , rio >=0.1
     , template-haskell >=2
+    , time >=1
     , vec >=0.4
     , which >=0.2
     , yesod >=1

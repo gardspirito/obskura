@@ -1,39 +1,23 @@
 {
   "nodes": {
-    "elm-i18next-gen": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1608324277,
-        "narHash": "sha256-RBBTJA3sEpI5nIqhifDZGldUnVvaGK2ZeYqgvccODQ0=",
-        "owner": "yonigibbs",
-        "repo": "elm-i18next-gen",
-        "rev": "cb407c3688c501fcb166bb14c3e102df9fdb7eb3",
-        "type": "github"
-      },
-      "original": {
-        "owner": "yonigibbs",
-        "repo": "elm-i18next-gen",
-        "type": "github"
-      }
-    },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1634146777,
-        "narHash": "sha256-nfUO4dAGrYhVf5L4II8gCBws+eLzypf/5g8EUQKtyKE=",
+        "lastModified": 1643543198,
+        "narHash": "sha256-QXArR2IZcFhBHU88tlKAO89PwM4IgWYpoZgP86Vq16g=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "851b719ac6bea528908fae1ec3ec9e0efae82e84",
+        "rev": "7c895e75941c9f9950e0367c342e1ffb09f7d8f0",
         "type": "github"
       },
       "original": {
         "owner": "NixOS",
+        "ref": "master",
         "repo": "nixpkgs",
         "type": "github"
       }
     },
     "root": {
       "inputs": {
-        "elm-i18next-gen": "elm-i18next-gen",
         "nixpkgs": "nixpkgs"
       }
     }

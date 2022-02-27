@@ -69,6 +69,7 @@ import qualified Yesod.Core.Content as YesCont
 -- FARENDE: Agordaro por retpoŝtadreso de sendanto.
 -- FARENDE: Totaleco de IO operacioj (specife de\ readFile, multe uzata en Lingvar)
 -- FARENDE: Apriora erartraktilo (por ke klientoj akiru ĝustan JSON kaze de fiasko)
+-- FARENDE: Forigi "sesia"
 data DosierPeto =
   DosierPeto
     { dosPlenNomo :: !Text
