@@ -11,6 +11,13 @@ packages:
       sha256: bef8458bddea924f3162e51fcef66cb3071f73c31d3dbb6d4029b0115af88a54
   original:
     hackage: which-0.2@sha256:db82ca7d83d64cce8ad579756f02d27c5bd289806ee02474726f7fafb87318e8,858
+- completed:
+    hackage: mr-env-0.1.0.4@sha256:56439c7df09a83b72b170f104723293643ad2635df03cdcd174a05d0d73e788d,1055
+    pantry-tree:
+      size: 376
+      sha256: da91d4e0f5aff5336e3e73ecb1d44fe595dd47bc572335956ba30d937d14573d
+  original:
+    hackage: mr-env-0.1.0.4@sha256:56439c7df09a83b72b170f104723293643ad2635df03cdcd174a05d0d73e788d,1055
 snapshots:
 - completed:
     size: 635150

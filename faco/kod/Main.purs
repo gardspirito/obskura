@@ -38,12 +38,17 @@ import Type.Proxy (Proxy(..))
 import UzantMenu as UzMenu
 import Web.HTML (window)
 import Web.HTML.Window (location)
+import Web.HTML.Location (pathname)
+import Routing.Duplex
+import Vojil
 
 main :: Effect Unit
 main =
   HA.runHalogenAff do
     pagx <- HA.awaitBody
     loko <- liftEffect (window >>= location)
+    nunaVojo <- liftEffect $ pathname loko
+    log $ genericShow $ parse vojo nunaVojo
     runUI kern loko pagx
 
 kern :: ∀ p en el m. MonadAff m => H.Component p en el m

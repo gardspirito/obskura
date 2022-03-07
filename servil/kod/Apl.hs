@@ -1,15 +1,9 @@
 {-# OPTIONS_GHC -Wno-orphans -Wno-unused-top-binds #-}
 
-import Auxtent (postAuxtent)
+{-# OPTIONS_GHC -Wno-orphans -Wno-unused-top-binds #-}
+import Auxtent (postAuxtent, ensalutTraktil)
 import qualified Data.ByteString as ByteString
 import Data.Maybe (fromJust)
-import Database.MongoDB.Connection (defaultPort)
-import Database.Persist.MongoDB
-  ( createMongoDBPool
-  , defaultConnectionIdleTime
-  , defaultPoolStripes
-  , defaultStripeConnections
-  )
 import Datum (Servil(..))
 import Lingvar (getLingvar, legLingv)
 import Network.DNS
@@ -33,7 +27,7 @@ import RIO
   , Foldable(elem)
   , IO
   , Maybe(Just, Nothing)
-  , Monad((>>=), return)
+  , Monad(return)
   , Read
   , Show
   , Text
@@ -43,10 +37,8 @@ import RIO
   , (<$>)
   , dropWhile
   , filter
-  , newTVarIO
-  , not
+  , not, race_
   )
-import qualified RIO.HashMap as HM
 import qualified RIO.Text as T
 import qualified RIO.Text.Partial as TP
 import qualified System.FilePath as FilePath
@@ -65,6 +57,8 @@ import Yesod
   , warp
   )
 import qualified Yesod.Core.Content as YesCont
+import Database.MongoDB (Host, host, connect)
+import System.Environment.MrEnv (envAsString)
 
 -- FARENDE: Agordaro por retpoŝtadreso de sendanto.
 -- FARENDE: Totaleco de IO operacioj (specife de\ readFile, multe uzata en Lingvar)
@@ -151,29 +145,28 @@ kreuPosxtilo = do
     finmsg <- renderMail' msg
     sendmailCustom vojAlSm ["-t"] finmsg
 
-kreiServil :: IO Servil
-kreiServil = do
-  mongo <-
-    createMongoDBPool
-      "obskurativ"
-      "localhost"
-      defaultPort
-      Nothing
-      defaultPoolStripes
-      defaultStripeConnections
-      defaultConnectionIdleTime
+kreiServil :: Host -> IO Servil
+kreiServil dbhost = do
+  db <- connect dbhost
   lingvDat <- legLingv
   sem <- kreuDNSSem
   posxtilo <- kreuPosxtilo
-  salutant <- newTVarIO HM.empty
   pure $
     Servil
-      { akirKonekt = mongo
-      , akirLingvDat = lingvDat
+      { akirLingvDat = lingvDat
       , akirDNSSem = sem
-      , akirSalutant = salutant
       , posxtu = posxtilo
+      , akirDb = db
       }
 
+servil :: Host -> IO ()
+servil dbhost = do
+  serv <- kreiServil dbhost
+  race_
+    (ensalutTraktil $ akirDb serv)
+    (warp 3000 serv)
+
 main :: IO ()
-main = kreiServil >>= warp 3000
+main = do
+  dbhost <- host <$> envAsString "DB" "localhost"
+  servil dbhost

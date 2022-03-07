@@ -32,6 +32,8 @@ dependencies:
 - fin >= 0.2
 - time >= 1
 - bson >= 0.4
+- mr-env >= 0.1
+- mtl >= 2
 
 executables:
   obskura:
@@ -79,3 +81,4 @@ executables:
     - -XQuantifiedConstraints
     - -XPolyKinds
     - -XStandaloneKindSignatures
+    - -XNamedFieldPuns

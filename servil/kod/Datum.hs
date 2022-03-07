@@ -4,19 +4,6 @@ import Data.Aeson (FromJSON, ToJSON, decode', defaultOptions, genericToEncoding)
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Encoding (unsafeToEncoding)
 import Data.Binary.Builder (fromLazyByteString)
-import Database.Persist.MongoDB
-  ( BackendKey(MongoKey)
-  , ConnectionPool
-  , MongoContext
-  , runMongoDBPoolDef
-  )
-import Database.Persist.TH
-  ( mkPersist
-  , mkPersistSettings
-  , persistLowerCase
-  , share
-  )
-import Language.Haskell.TH (Type(..))
 import Network.DNS (ResolvSeed)
 import Network.HTTP.Types (status200, status400, status500)
 import Network.Mail.Mime (Mail)
@@ -27,10 +14,8 @@ import RIO
   , HashMap
   , HashSet
   , IO
-  , Int
   , Maybe
   , MonadIO
-  , TVar
   , Void
   , ($)
   , (.)
@@ -53,12 +38,11 @@ import Yesod
   , ToContent(..)
   , ToJSON(toEncoding, toJSON)
   , ToTypedContent(..)
-  , YesodPersist(..)
   , defaultFormMessage
-  , getYesod
   , parseCheckJsonBody
   , sendStatusJSON
   )
+import Database.MongoDB (Pipe)
 
 type Lingvo = Text
 
@@ -66,29 +50,22 @@ type LingvMankoj = HashMap Lingvo (HashSet Text)
 
 data LingvDatum =
   LingvDatum
-    { lingvMankoj :: LingvMankoj
-    , lingvSimboloj :: [Text]
+    { lingvMankoj :: !LingvMankoj
+    , lingvSimboloj :: ![Text]
     }
 
 data Servil =
   Servil
-    { akirKonekt :: ConnectionPool
-    , akirLingvDat :: LingvDatum
-    , akirDNSSem :: ResolvSeed
-    , akirSalutant :: TVar (HashMap Text (Maybe Int))
-    , posxtu :: Text -> (Mail -> Mail) -> IO ()
+    { akirLingvDat :: !LingvDatum
+    , akirDNSSem :: !ResolvSeed
+    , posxtu :: !(Text -> (Mail -> Mail) -> IO ())
+    , akirDb :: !Pipe
     }
 
 type Traktil = HandlerFor Servil
 
 instance RenderMessage Servil FormMessage where
   renderMessage _ _ = defaultFormMessage
-
-instance YesodPersist Servil where
-  type YesodPersistBackend Servil = MongoContext
-  runDB ago = do
-    pool <- akirKonekt <$> getYesod
-    runMongoDBPoolDef ago pool
 
 jsLeg :: (MonadIO m, FromJSON a) => FilePath -> m (Maybe a)
 jsLeg dosNomo = decode' <$> BSL.readFile dosNomo
@@ -130,9 +107,11 @@ klientErar erar = sendStatusJSON status400 (KlientErar erar :: Respond ())
 malpurRaporti :: ApiRespond a -> b
 malpurRaporti (ApiRespond v) = absurd v
 
+-- | Fini pritraktado de peto frue okaze de eraro.
 auFrue :: Traktil (Either (ApiRespond a) a) -> Traktil a
 auFrue f = f <&> either malpurRaporti id
 
+-- | Malkodigi JSON peto de kliento.
 akirPet :: FromJSON a => Traktil (Either (ApiRespond erar) a)
 akirPet =
   parseCheckJsonBody >>= \case
@@ -140,7 +119,7 @@ akirPet =
     Aeson.Error erar -> klientErar (PetErar $ T.pack erar) <&> Left
 
 data Respond v
-  = Sukc v
+  = Sukc !v
   | ServilErar
   | KlientErar KlientErar
   deriving (Generic)
@@ -148,14 +127,6 @@ data Respond v
 data KlientErar
   = MalgxustaRetposxtErar
   | DomajnoNeEkzistasErar
-  | PetErar Text
+  | PetErar !Text
   | ErarojAnkauxPovasHaviKorpon_ ()
   deriving (Generic)
-
-share
-  [mkPersist (mkPersistSettings (ConT ''MongoContext))]
-  [persistLowerCase|
-Uzant
-  retposxt Text
-  UnikRetposxt retposxt
-|]

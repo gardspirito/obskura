@@ -39,6 +39,7 @@ import Halogen.HTML.Events as HE
 import Halogen.Hooks as HK
 import Prelude (class Eq, class Ord, Unit, bind, pure, ($), (<#>), (<$>), (<<<), (<>), (>>>))
 import Web.Event.Event (Event, EventType(..))
+import Vojil (Vojo)
 
 type Tradukil
   = String -> String
@@ -165,3 +166,7 @@ skrKErar erar trd =
     $ case erar of
         MalgxustaRetposxtErar -> "erar.klient.malgxusta-retposxt"
         DomajnoNeEkzistasErar -> "erar.klient.domajno-ne-ekzistas"
+
+data Komand 
+  = KmdErari Erar
+  | KmdIri Vojo

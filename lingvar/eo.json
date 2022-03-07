@@ -22,10 +22,10 @@
   "erar.servil.malkod": "Mi ne sukcesis kompreni respondon de servilo. Jen estas la eraro:",
   "erar.servil.nekonata-var": "Servilo parolas alilingve. Mi ne povas kompreni dirataĵon.",
   "erar.servil.ret": "Okazis problemo kiam mi provis akiri datumon el de servilo. Bonvole provu ree.",
-  "servil.retmsg.ensaluti.1": "Ni ekaŭdis, ke vi volas ensaluti. Ĉi tio ja esta bona novaĵo.",
-  "servil.retmsg.ensaluti.2": "Jen estas la aŭtentigligilo:",
-  "servil.retmsg.ensaluti.3": "Ĝi laboros dum 5 minutoj.",
-  "servil.retmsg.ensaluti.4": "Ĉu vi ne sendis la peton? Nu, ĉi-kaze nur ignoru ĉi tiun mesaĝon.",
+  "servil.retmsg.ensaluti.0": "Ni ekaŭdis, ke vi volas ensaluti. Ĉi tio ja esta bona novaĵo.",
+  "servil.retmsg.ensaluti.1": "Jen estas la aŭtentigligilo:",
+  "servil.retmsg.ensaluti.2": "Ĝi laboros dum 5 minutoj.",
+  "servil.retmsg.ensaluti.3": "Ĉu vi ne sendis la peton? Nu, ĉi-okaze nur ignoru ĉi tiun mesaĝon.",
   "servil.retmsg.ensaluti.temo": "Ensaluti en Obskurativ",
   "servil.retmsg.salut": "Saluton!"
 }

@@ -156,9 +156,9 @@ krudTradukoj = krudTradukoj'
           procDos rezMap xs
 
 data Interlingv a where
-  IPur :: a -> Interlingv a
-  IPet :: HashSet Text -> ((Text -> Maybe Text) -> a) -> Interlingv a
-  IApl :: Interlingv (a -> b) -> Interlingv a -> Interlingv b
+  IPur :: !a -> Interlingv a
+  IPet :: !(HashSet Text) -> !((Text -> Maybe Text) -> a) -> Interlingv a
+  IApl :: !(Interlingv (a -> b)) -> !(Interlingv a) -> Interlingv b
 
 instance Functor Interlingv where
   fmap f (IPur a) = IPur $ f a
@@ -194,8 +194,8 @@ tpetList list =
 
 -- | Krei liston de tradukoj por elnumeritaj partoj de mesaĝo.
 -- Oni prenu nur komenca parto de ĉi tiu listo.
--- @tpetPartoj = tpetList ["1", "2", "3", "4", "5", ...]@
--- @tKunDe "abc" tpetPartoj = ["abc.1", "abc.2", "abc.3", "abc.4", "abc.5", ...]@
+-- @tpetPartoj = tpetList ["0", "1", "2", "3", "4", "5", ...]@
+-- @tKunDe "abc" tpetPartoj = ["abc.0", "abc.1", "abc.2", "abc.3", "abc.4", "abc.5", ...]@
 tpetPartoj :: SNatI n => Interlingv (Vec.Vec n Text)
 tpetPartoj = tpetList $ Vec.tabulate (tshow . toInteger)
 
