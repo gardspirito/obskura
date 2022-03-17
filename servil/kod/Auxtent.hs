@@ -128,7 +128,7 @@ ensalutTraktil kon =
            ] >>=
          look "ok"
        forever $ do
-         traceIO "cikl"
+         --traceIO "cikl"
          liftIO $ threadDelay (300 * sek)
          nun <- liftIO getCurrentTime
          forigCxiuj $ m_ {ensalutGxis = (<.) nun}

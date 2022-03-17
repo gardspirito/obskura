@@ -10,6 +10,10 @@ import qualified RIO.HashSet as HS
 import qualified RIO.Text as T
 import qualified RIO.Partial as P
 import qualified GHC.TypeLits as GHC
+import qualified Patience as Dif
+import qualified Data.Text.ICU as ICU
+import RIO.List (stripPrefix)
+import Data.Text.IO (putStrLn)
 
 -- FARENDE: Forigi KunKonservita modelo? ... kaj KolDe
 
@@ -56,7 +60,7 @@ instance Malplena a => GMalplena (Rec0 a) where
 instance Malplena (Maybe a) where
   malplena = Nothing
 instance Malplena (Preter a) where
-  malplena = Preterlas 
+  malplena = Preterlas
 instance Malplena [a] where
   malplena = []
 instance Malplena Int where
@@ -73,8 +77,8 @@ type family Plenumi (e :: Esprim a) :: a
 data Konst :: a -> b -> Esprim a
 type instance Plenumi (Konst x _) = x
 
-data Aplik :: (Type -> a) -> Type -> Esprim a
-type instance Plenumi (Aplik f a) = f a
+data Curryigi :: (Type -> a) -> Type -> Esprim a
+type instance Plenumi (Curryigi f a) = f a
 
 ---- Aliaj helpantaj tipfamilioj
 type EnList :: Type -> [Type] -> Bool
@@ -103,6 +107,10 @@ type family Se cond a b where
   Se 'True  a _ = a
   Se 'False _ b = b
 
+type family Kaj a b where
+  Kaj 'True 'True = 'True
+  Kaj _ _ = 'False
+
 ------ HKD
 
 ---- Argumentoj (`A` prefikso)
@@ -123,16 +131,16 @@ instance Enhavas Gxis Malpusx
 
 -- Cxelo de strukturo, por kiu estis elektita specifa kunteksto.
 type Cxelo :: Type -> (Type -> Esprim Type) -> [Type] -> Type
-type family Cxelo var hkd arg where
-  Cxelo Enmet hkd _ = Plenumi (hkd Enmet)
-  Cxelo Gxis hkd _ = Preter (Plenumi (hkd Gxis))
-  Cxelo Malpusx hkd _ = Plenumi (hkd Elekt)
-  Cxelo Leg hkd _ = Plenumi (hkd Leg)
-  Cxelo Elekt hkd _ = Preter (Plenumi (hkd Elekt))
+type family Cxelo var hkd arg
+type instance Cxelo Enmet hkd _ = Plenumi (hkd Enmet)
+type instance Cxelo Gxis hkd _ = Preter (Plenumi (hkd Gxis))
+type instance Cxelo Malpusx hkd _ = Plenumi (hkd Elekt)
+type instance Cxelo Leg hkd _ = Plenumi (hkd Leg)
+type instance Cxelo Elekt hkd _ = Preter (Plenumi (hkd Elekt))
 
 type HE :: Type -> (Type -> Esprim Type) -> [Type] -> Type
 data HE var1 hkd arg where
-  HE :: forall var2 var1 hkd arg. (Enhavas var1 var2, MongoKod (Cxelo var2 hkd arg)) 
+  HE :: forall var2 var1 hkd arg. (Enhavas var1 var2, MongoKod (Cxelo var2 hkd arg))
     => !(Cxelo var2 hkd arg) -> HE var1 hkd arg
 
 instance (BoolVal (EnList AId arg)) => MongoKod (HE a hkd arg) where
@@ -145,7 +153,7 @@ instance (BoolVal (EnList AId arg)) => MongoKod (HE a hkd arg) where
         nom := kval
     where
       kval = kodig v
-instance (BoolVal (EnList AId arg), MongoMalkod (Cxelo var hkd arg)) 
+instance (BoolVal (EnList AId arg), MongoMalkod (Cxelo var hkd arg))
     => MongoMalkod (HE var hkd arg) where
   malkodig x = HE @var <$> malkodig x
   malkodigCxel krudaNom = do
@@ -153,14 +161,14 @@ instance (BoolVal (EnList AId arg), MongoMalkod (Cxelo var hkd arg))
       maybe mzero pure (malkodig x)
     where
       nom = if (boolVal @(EnList AId arg)) then "_id" else krudaNom
-instance (MongoKod (Cxelo var hkd arg), Malplena (Cxelo var hkd arg)) 
+instance (MongoKod (Cxelo var hkd arg), Malplena (Cxelo var hkd arg))
     => Malplena (HE var hkd arg) where
   malplena = HE @var malplena
 
 data HKDList :: (Type -> Type) -> Type -> Esprim Type
 type instance Plenumi (HKDList hkd var) = [hkd var]
 
-type H' var hkd arg = HE var (Aplik hkd) arg
+type H' var hkd arg = HE var (Curryigi hkd) arg
 
 ---- Operacioj kun simplaj tipoj
 
@@ -181,7 +189,7 @@ data MongoKomp a = KNeEgal (MongoKomp' a) a | KEgal a
 instance MongoKod a => MongoKod (MongoKomp a) where
   kodig (KEgal x) = kodig x
   kodig (KNeEgal (MongoKomp' {kompMalpli, kompEg}) x) =
-      Doc [ nom := kodig x] 
+      Doc [ nom := kodig x]
     where
       nom = "$" <> (if kompMalpli then "l" else "g") <> "t" <> (if kompEg then "e" else "")
 
@@ -201,7 +209,7 @@ komparil' = HE @Elekt . Inkluziv
 (>.) :: Komparil a arg
 (>.) = komparil' .KNeEgal (MongoKomp' False False)
 
-type instance Plenumi (LevSimpl UTCTime var) = Se (Egal Elekt var) (MongoKomp UTCTime) UTCTime 
+type instance Plenumi (LevSimpl UTCTime var) = Se (Egal Elekt var) (MongoKomp UTCTime) UTCTime
 
 ---- Konservado
 
@@ -213,7 +221,7 @@ class HavasUnuId obj elRikord where
 type family GHavasUnuId rep where
   GHavasUnuId (M1 _ _ f) = GHavasUnuId f
   GHavasUnuId (a :*: b) = Xor (GHavasUnuId a) (GHavasUnuId b)
-  GHavasUnuId (Rec0 (HE _ tip arg)) = EnList AId arg 
+  GHavasUnuId (Rec0 (HE _ tip arg)) = EnList AId arg
   GHavasUnuId _ = 'False
 
 instance (Generic (a Enmet), GHavasUnuId (Rep (a Enmet)) ~ 'True) => HavasUnuId a 'True where
@@ -223,7 +231,7 @@ instance (Generic (a Enmet), GHavasUnuId (Rep (a Enmet)) ~ 'True) => HavasUnuId 
 class GHavasUnuId (Rep (a Enmet)) ~ 'False => KunKonservita a where
   kunId :: Value
 
-instance (KunKonservita a, Generic (a Enmet), GHavasUnuId (Rep (a Enmet)) ~ 'False) 
+instance (KunKonservita a, Generic (a Enmet), GHavasUnuId (Rep (a Enmet)) ~ 'False)
     => HavasUnuId a 'False where
   alfiksendaId = Just $ kunId @a
 
@@ -287,12 +295,95 @@ forigUnu = forig' True
 forigCxiuj :: (MongoKod (a Elekt), Konservita a) => a Elekt -> Action IO ()
 forigCxiuj = forig' False
 
--- Efektiva eluzo
+-- Diferenco
+
+data DensDifRez a = DifPreter Int | DifNov [a] | DifMalnov [a] deriving Show
+
+densigiDif :: [Dif.Item a] -> [DensDifRez a]
+densigiDif orEn = reinv <$> redukt invFand (alDens <$> orEn) where
+  alDens (Dif.New a) = DifNov [a]
+  alDens (Dif.Old a) = DifMalnov [a]
+  alDens (Dif.Both _ _) = DifPreter 1
+
+  redukt :: (a -> a -> Maybe a) -> [a] -> [a]
+  redukt f = redukt' where
+    redukt' (a:b:xs)
+      | Just r <- f a b = redukt' (r:xs)
+      | otherwise = a:redukt' (b:xs)
+    redukt' xs = xs
+
+  -- Kunfandi DensDifRez inverse. [DifNov [a], DifNov [b], DifNov [c]] -> [DifNov [c, b, a]]
+  invFand :: DensDifRez a -> DensDifRez a -> Maybe (DensDifRez a)
+  invFand (DifPreter n1) (DifPreter n2) = Just $ DifPreter (n1 + n2)
+  invFand (DifNov x1)    (DifNov x2)    = Just $ DifNov (x2 <> x1)
+  invFand (DifMalnov x1) (DifMalnov x2) = Just $ DifMalnov (x2 <> x1)
+  invFand _ _                           = Nothing
+
+  reinv :: DensDifRez a -> DensDifRez a
+  reinv orp@(DifPreter _) = orp
+  reinv (DifNov x) = DifNov $ reverse x
+  reinv (DifMalnov x) = DifMalnov $ reverse x
+
+class Difebla a where
+  type DifRez a
+  type DifUnuoj a
+  alUnuoj :: a -> DifUnuoj a
+  elUnuoj :: DifUnuoj a -> a
+  dif :: DifUnuoj a -> DifUnuoj a -> DifRez a
+  maldif :: DifUnuoj a -> DifRez a -> DifUnuoj a
+
+newtype AfisxTekst = AfisxTekst Text deriving (MongoKod)
+instance MongoMalkod AfisxTekst where
+  malkodig v = AfisxTekst <$> malkodig v
+
+erarSxan :: String
+erarSxan = "Impossible to revert specified change of the object: the object and the change are unrelated."
+
+instance Difebla AfisxTekst where
+  type DifRez AfisxTekst = [DensDifRez Text]
+  type DifUnuoj AfisxTekst = [Text]
+  alUnuoj (AfisxTekst x) = ICU.brkBreak <$> ICU.breaks (ICU.breakWord "ru_RU") x
+  elUnuoj = AfisxTekst . T.concat
+  dif malnov nov
+    = densigiDif $ Dif.diff malnov nov
+  maldif orXs ((DifPreter orN):difs) = preter orXs orN where
+    -- | Ni preterlasu `n` sekvaj elementoj
+    preter xs 0 = maldif @AfisxTekst xs difs
+    preter (x:xs) n = x : preter xs (n - 1)
+    preter _ _ = error erarSxan
+  maldif xs ((DifNov novoj):difs)
+    | Just rest <- stripPrefix novoj xs = maldif @AfisxTekst rest difs
+    | otherwise = error erarSxan
+  maldif xs ((DifMalnov malnov):difs) = malnov <> maldif @AfisxTekst xs difs
+  maldif xs [] = xs
+
+debugMontrDif :: AfisxTekst -> AfisxTekst -> IO ()
+debugMontrDif un du = sequence_ $ montr' <$> dif @AfisxTekst (alUnuoj un) (alUnuoj du) where
+  montr' (DifPreter n) = putStrLn ("... preterlasis " <> tshow n <> " samajn vortojn")
+  montr' (DifNov nov) = montrKunSign "+" nov
+  montr' (DifMalnov malnov) = montrKunSign "-" malnov
+  montrKunSign sign kion = putStrLn $ sign <> " " <> T.concat kion
+
+data Dif
+type instance Cxelo Dif hkd _ = Preter (Plenumi (hkd Dif))
+
+data Difil a var where
+  DifilKrud :: EnList var '[Enmet, Leg] ~ 'True => a -> Difil a var
+  DifilGxis :: DensDifRez a -> Difil a Dif
+instance (MongoKod a, MongoKod (DensDifRez a)) => MongoKod (Difil a var) where
+  kodig (DifilKrud x) = kodig x
+  kodig (DifilGxis x) = kodig x
+instance (MongoMalkod a, MongoKod (DensDifRez a)) => MongoMalkod (Difil a Enmet) where
+  malkodig v = DifilKrud <$> malkodig v
+instance (MongoMalkod a, MongoKod (DensDifRez a)) => MongoMalkod (Difil a Leg) where
+  malkodig v = DifilKrud <$> malkodig v
+instance (MongoMalkod a, MongoMalkod (DensDifRez a)) => MongoMalkod (Difil a Dif) where
+  malkodig v = DifilGxis <$> malkodig v
 
 data Retposxt
 
 retposxtPerm :: HashSet Char
-retposxtPerm = HS.fromList "abcdefghijklmnopqrstuvwxyz0123456789.-_"
+retposxtPerm = HS.fromList $ "abcdefghijklmnopqrstuvwxyz0123456789.-_"
 
 instance Filtr Retposxt where
   type En Retposxt = Text

@@ -47,11 +47,14 @@ executable obskura
     , mr-env >=0.1
     , mtl >=2
     , network >=3
+    , patience >=0.3
     , persistent >=2
     , persistent-mongoDB >=2
     , random >=1.2
     , rio >=0.1
     , template-haskell >=2
+    , text >=2
+    , text-icu >=0.8
     , time >=1
     , vec >=0.4
     , which >=0.2

@@ -34,6 +34,9 @@ dependencies:
 - bson >= 0.4
 - mr-env >= 0.1
 - mtl >= 2
+- patience >= 0.3
+- text >= 2
+- text-icu >= 0.8
 
 executables:
   obskura:
