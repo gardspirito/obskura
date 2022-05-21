@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-orphans -Wno-unused-top-binds #-}
-
-{-# OPTIONS_GHC -Wno-orphans -Wno-unused-top-binds #-}
 import Auxtent (postAuxtent, ensalutTraktil)
 import qualified Data.ByteString as ByteString
 import Data.Maybe (fromJust)
@@ -74,13 +71,11 @@ data DosierPeto =
 
 instance PathPiece DosierPeto where
   toPathPiece = dosPlenNomo
-  fromPathPiece x
-    | not $ T.null x =
-      let (kom, fin) = TP.breakOnEnd "." x
-       in if T.null kom
-            then Nothing
-            else Just $ DosierPeto x fin
-  fromPathPiece _ = Nothing
+  fromPathPiece x =
+    let (kom, fin) = TP.breakOnEnd "." x
+      in if T.null kom
+          then Nothing
+          else Just $ DosierPeto x fin
 
 mkYesod
   "Servil"
