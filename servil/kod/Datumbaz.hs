@@ -10,6 +10,7 @@ import qualified RIO.HashSet as HS
 import qualified RIO.Text as T
 import qualified RIO.Partial as P
 import qualified GHC.TypeLits as GHC
+import Control.Monad.Except (ExceptT (ExceptT), runExceptT, MonadError (throwError))
 
 -- FARENDE: Forigi KunKonservita modelo? ... kaj KolDe
 
@@ -22,10 +23,8 @@ class Filtr a where
 data Filtrita a where
   UnsafeFrFiltrita :: Filtr a => El a -> Filtrita a
 
-instance (Filtr a, MongoKod (El a)) => MongoKod (Filtrita a) where
-  kodig (UnsafeFrFiltrita x) = kodig @(El a) x
-instance (Filtr a, MongoMalkod (El a)) => MongoMalkod (Filtrita a) where
-  malkodig x = UnsafeFrFiltrita <$> malkodig @(El a) x
+instance (Filtr a, MongoKodil (El a)) => MongoKodil (Filtrita a) where
+  kodil = kodMapLiv (\((UnsafeFrFiltrita x)) -> x) UnsafeFrFiltrita $ kodil
 
 instance forall a. Filtr a => Filtr (Filtrita a) where
   type En (Filtrita a) = En a
@@ -56,7 +55,7 @@ instance Malplena a => GMalplena (Rec0 a) where
 instance Malplena (Maybe a) where
   malplena = Nothing
 instance Malplena (Preter a) where
-  malplena = Preterlas 
+  malplena = Preterlas
 instance Malplena [a] where
   malplena = []
 instance Malplena Int where
@@ -109,53 +108,41 @@ type family Se cond a b where
 data AId
 
 ---- Kuntekstoj
-data Enmet
-data Gxis
+data EnmetKunt
+data GxisKunt
 data ArRigard
-data Malpusx
-data Elekt
-data Leg
+data MalpusxKunt
+data ElektKunt
+data LegKunt
 
 class Enhavas a b
 
 instance Enhavas a a
-instance Enhavas Gxis Malpusx
+instance Enhavas GxisKunt MalpusxKunt
 
 -- Cxelo de strukturo, por kiu estis elektita specifa kunteksto.
 type Cxelo :: Type -> (Type -> Esprim Type) -> [Type] -> Type
 type family Cxelo var hkd arg where
-  Cxelo Enmet hkd _ = Plenumi (hkd Enmet)
-  Cxelo Gxis hkd _ = Preter (Plenumi (hkd Gxis))
-  Cxelo Malpusx hkd _ = Plenumi (hkd Elekt)
-  Cxelo Leg hkd _ = Plenumi (hkd Leg)
-  Cxelo Elekt hkd _ = Preter (Plenumi (hkd Elekt))
+  Cxelo EnmetKunt hkd _ = Plenumi (hkd EnmetKunt)
+  Cxelo GxisKunt hkd _ = Preter (Gxis (Plenumi (hkd GxisKunt)))
+  Cxelo MalpusxKunt hkd _ = Plenumi (hkd ElektKunt)
+  Cxelo LegKunt hkd _ = Plenumi (hkd LegKunt)
+  Cxelo ElektKunt hkd _ = Preter (Plenumi (hkd ElektKunt))
 
 type HE :: Type -> (Type -> Esprim Type) -> [Type] -> Type
 data HE var1 hkd arg where
-  HE :: forall var2 var1 hkd arg. (Enhavas var1 var2, MongoKod (Cxelo var2 hkd arg)) 
+  HE :: forall var2 var1 hkd arg. (Enhavas var1 var2, MongoKodil (Cxelo var2 hkd arg))
     => !(Cxelo var2 hkd arg) -> HE var1 hkd arg
 
-instance (BoolVal (EnList AId arg)) => MongoKod (HE a hkd arg) where
-  kodig (HE x) = kodig x
-  kodigCxel nom v =
-    Just $
-      if boolVal @(EnList AId arg) then
-        "_id" := kval
+instance (BoolVal (EnList AId arg)) => MongoKodil (HE a hkd arg) where
+  kodil = kodMapLiv (\(HE x) -> x) HE $ kodil
+  kodilCxel nom =
+    KodEn
+      (if boolVal @(EnList AId arg) then
+        "_id"
       else
-        nom := kval
-    where
-      kval = kodig v
-instance (BoolVal (EnList AId arg), MongoMalkod (Cxelo var hkd arg)) 
-    => MongoMalkod (HE var hkd arg) where
-  malkodig x = HE @var <$> malkodig x
-  malkodigCxel krudaNom = do
-      x <- ?mk nom
-      maybe mzero pure (malkodig x)
-    where
-      nom = if (boolVal @(EnList AId arg)) then "_id" else krudaNom
-instance (MongoKod (Cxelo var hkd arg), Malplena (Cxelo var hkd arg)) 
-    => Malplena (HE var hkd arg) where
-  malplena = HE @var malplena
+        nom)
+      kodil
 
 data HKDList :: (Type -> Type) -> Type -> Esprim Type
 type instance Plenumi (HKDList hkd var) = [hkd var]
@@ -178,17 +165,17 @@ data MongoKomp' a = MongoKomp' {
     kompEg :: !Bool
   }
 data MongoKomp a = KNeEgal (MongoKomp' a) a | KEgal a
-instance MongoKod a => MongoKod (MongoKomp a) where
+instance MongoKodil a => MongoKodil (MongoKomp a) where
   kodig (KEgal x) = kodig x
   kodig (KNeEgal (MongoKomp' {kompMalpli, kompEg}) x) =
-      Doc [ nom := kodig x] 
+      Doc [ nom := kodig x]
     where
       nom = "$" <> (if kompMalpli then "l" else "g") <> "t" <> (if kompEg then "e" else "")
 
-type MKompareblas a = (MongoKod a, Plenumi (LevSimpl a Elekt) ~ MongoKomp a)
-type Komparil a arg = MKompareblas a => a -> H Elekt a arg
-komparil' :: MKompareblas a => MongoKomp a -> H Elekt a arg
-komparil' = HE @Elekt . Inkluziv
+type MKompareblas a = (MongoKodil a, Plenumi (LevSimpl a ElektKunt) ~ MongoKomp a)
+type Komparil a arg = MKompareblas a => a -> H ElektKunt a arg
+komparil' :: MKompareblas a => MongoKomp a -> H ElektKunt a arg
+komparil' = HE @ElektKunt . Inkluziv
 
 (<.) :: Komparil a arg
 (<.)  = komparil' . KNeEgal (MongoKomp' True False)
@@ -201,7 +188,7 @@ komparil' = HE @Elekt . Inkluziv
 (>.) :: Komparil a arg
 (>.) = komparil' .KNeEgal (MongoKomp' False False)
 
-type instance Plenumi (LevSimpl UTCTime var) = Se (Egal Elekt var) (MongoKomp UTCTime) UTCTime 
+type instance Plenumi (LevSimpl UTCTime var) = Se (Egal ElektKunt var) (MongoKomp UTCTime) UTCTime
 
 ---- Konservado
 
@@ -213,17 +200,17 @@ class HavasUnuId obj elRikord where
 type family GHavasUnuId rep where
   GHavasUnuId (M1 _ _ f) = GHavasUnuId f
   GHavasUnuId (a :*: b) = Xor (GHavasUnuId a) (GHavasUnuId b)
-  GHavasUnuId (Rec0 (HE _ tip arg)) = EnList AId arg 
+  GHavasUnuId (Rec0 (HE _ tip arg)) = EnList AId arg
   GHavasUnuId _ = 'False
 
-instance (Generic (a Enmet), GHavasUnuId (Rep (a Enmet)) ~ 'True) => HavasUnuId a 'True where
+instance (Generic (a EnmetKunt), GHavasUnuId (Rep (a EnmetKunt)) ~ 'True) => HavasUnuId a 'True where
   alfiksendaId = Nothing
 
 -- | La rikordo estas kunkonservita en komunuma konservejo kaj havas specifan ID.
-class GHavasUnuId (Rep (a Enmet)) ~ 'False => KunKonservita a where
+class GHavasUnuId (Rep (a EnmetKunt)) ~ 'False => KunKonservita a where
   kunId :: Value
 
-instance (KunKonservita a, Generic (a Enmet), GHavasUnuId (Rep (a Enmet)) ~ 'False) 
+instance (KunKonservita a, Generic (a EnmetKunt), GHavasUnuId (Rep (a EnmetKunt)) ~ 'False)
     => HavasUnuId a 'False where
   alfiksendaId = Just $ kunId @a
 
@@ -233,7 +220,7 @@ class Konservita a where
 data KolEl :: GHC.Symbol -> (Type -> Type) -> Type -> Type where
   KolEl :: hkd var -> KolEl s hkd var
 
-instance MongoKod (hkd var) => MongoKod (KolEl s hkd var) where
+instance MongoKodil (hkd var) => MongoKodil (KolEl s hkd var) where
   kodig (KolEl x) = kodig x
 instance GHC.KnownSymbol s => Konservita (KolEl  s a) where
   konservejo = T.pack $ GHC.symbolVal @s Proxy
@@ -251,40 +238,37 @@ instance (GKreiElekt a, GKreiElekt b) => GKreiElekt (a :*: b) where
 class GKreiElektCxel tip jes where
   gkreiElektCxel :: Value -> Maybe tip
 
-instance (MongoMalkod (Plenumi (hkd Elekt)), EnList AId arg ~ 'True) => GKreiElektCxel (HE Elekt hkd arg) 'True where
-  gkreiElektCxel v = HE @Elekt . Inkluziv <$> malkodig v
-instance (MongoKod (Plenumi (hkd Elekt)), EnList AId arg ~ 'False) => GKreiElektCxel (HE Elekt hkd arg) 'False where
-  gkreiElektCxel _ = Just $ HE @Elekt Preterlas
+instance (MongoMalkod (Plenumi (hkd ElektKunt)), EnList AId arg ~ 'True) => GKreiElektCxel (HE ElektKunt hkd arg) 'True where
+  gkreiElektCxel v = HE @ElektKunt . Inkluziv <$> malkodig v
+instance (MongoKodil (Plenumi (hkd ElektKunt)), EnList AId arg ~ 'False) => GKreiElektCxel (HE ElektKunt hkd arg) 'False where
+  gkreiElektCxel _ = Just $ HE @ElektKunt Preterlas
 
-instance GKreiElektCxel (HE Elekt hkd arg) (EnList AId arg) => GKreiElekt (Rec0 (HE Elekt hkd arg)) where
+instance GKreiElektCxel (HE ElektKunt hkd arg) (EnList AId arg) => GKreiElekt (Rec0 (HE ElektKunt hkd arg)) where
   gkreiElekt v = K1 <$> gkreiElektCxel @_ @(EnList AId arg) v
 
---- SPECIALA MONGO KOD REGULO POR AId ĉelo, POR KE ĜI KODIĜU KIEL `_id`
--- ... samo por Mongo malkod!
-
 -- Funkcioj
-en :: MongoKod (Plenumi (LevSimpl a Enmet)) => Plenumi (LevSimpl a Enmet) -> H Enmet a arg
-en = HE @Enmet
+en :: MongoKodil (Plenumi (LevSimpl a EnmetKunt)) => Plenumi (LevSimpl a EnmetKunt) -> H EnmetKunt a arg
+en = HE @EnmetKunt
 
-en' :: MongoKod (hkd Enmet) => hkd Enmet -> H' Enmet hkd arg
-en' = HE @Enmet
+en' :: MongoKodil (hkd EnmetKunt) => hkd EnmetKunt -> H' EnmetKunt hkd arg
+en' = HE @EnmetKunt
 
-enmet :: forall a. (MongoKod (a Enmet), Konservita a,
-      Generic (a Enmet), HavasUnuId a (GHavasUnuId (Rep (a Enmet))),
-      Generic (a Elekt), GKreiElekt (Rep (a Elekt)))
-    => a Enmet -> Action IO (a Elekt)
+enmet :: forall a. (MongoKodil (a EnmetKunt), Konservita a,
+      Generic (a EnmetKunt), HavasUnuId a (GHavasUnuId (Rep (a EnmetKunt))),
+      Generic (a ElektKunt), GKreiElekt (Rep (a ElektKunt)))
+    => a EnmetKunt -> Action IO (a ElektKunt)
 enmet x = do
   GHC.to . P.fromJust . gkreiElekt <$> insert (konservejo @a) (kodigDok x <> alfiksi)
   where
-    alfiksi = ("_id" =:) <$> catMaybes [alfiksendaId @a @(GHavasUnuId (Rep (a Enmet)))]
+    alfiksi = ("_id" =:) <$> catMaybes [alfiksendaId @a @(GHavasUnuId (Rep (a EnmetKunt)))]
 
-forig' :: forall a. (MongoKod (a Elekt), Konservita a) => Bool -> a Elekt -> Action IO ()
+forig' :: forall a. (MongoKodil (a ElektKunt), Konservita a) => Bool -> a ElektKunt -> Action IO ()
 forig' unu v = void $ deleteMany (konservejo @a) [(kodigDok v, [SingleRemove | unu])]
 
-forigUnu :: (MongoKod (a Elekt), Konservita a) => a Elekt -> Action IO ()
+forigUnu :: (MongoKodil (a ElektKunt), Konservita a) => a ElektKunt -> Action IO ()
 forigUnu = forig' True
 
-forigCxiuj :: (MongoKod (a Elekt), Konservita a) => a Elekt -> Action IO ()
+forigCxiuj :: (MongoKodil (a ElektKunt), Konservita a) => a ElektKunt -> Action IO ()
 forigCxiuj = forig' False
 
 -- Efektiva eluzo

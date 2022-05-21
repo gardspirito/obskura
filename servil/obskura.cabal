@@ -28,7 +28,7 @@ executable obskura
       Paths_obskura
   hs-source-dirs:
       kod
-  ghc-options: -Wall -O2 -fllvm -threaded -rtsopts -with-rtsopts=-N -XNoImplicitPrelude -XDataKinds -XDerivingStrategies -XFlexibleInstances -XGADTs -XGeneralisedNewtypeDeriving -XMultiParamTypeClasses -XOverloadedStrings -XQuasiQuotes -XStandaloneDeriving -XTemplateHaskell -XTypeFamilies -XUndecidableInstances -XViewPatterns -XOverloadedStrings -XMonadComprehensions -XTupleSections -XLambdaCase -XDeriveGeneric -XBlockArguments -XPatternSynonyms -XRankNTypes -XAllowAmbiguousTypes -XTypeApplications -XScopedTypeVariables -XOverloadedLabels -XTypeOperators -XFlexibleContexts -XConstraintKinds -XImplicitParams -XDefaultSignatures -XDerivingVia -XQuantifiedConstraints -XPolyKinds -XStandaloneKindSignatures -XNamedFieldPuns
+  ghc-options: -Wall -O2 -fllvm -threaded -rtsopts -with-rtsopts=-N -XNoImplicitPrelude -XDataKinds -XDerivingStrategies -XFlexibleInstances -XGADTs -XGeneralisedNewtypeDeriving -XMultiParamTypeClasses -XOverloadedStrings -XQuasiQuotes -XStandaloneDeriving -XTemplateHaskell -XTypeFamilies -XUndecidableInstances -XViewPatterns -XOverloadedStrings -XMonadComprehensions -XTupleSections -XLambdaCase -XDeriveGeneric -XBlockArguments -XPatternSynonyms -XRankNTypes -XAllowAmbiguousTypes -XTypeApplications -XScopedTypeVariables -XOverloadedLabels -XTypeOperators -XFlexibleContexts -XConstraintKinds -XImplicitParams -XDefaultSignatures -XDerivingVia -XQuantifiedConstraints -XPolyKinds -XStandaloneKindSignatures -XNamedFieldPuns -XInstanceSigs -XImpredicativeTypes
   build-depends:
       aeson >=1
     , base >=4
@@ -52,6 +52,7 @@ executable obskura
     , random >=1.2
     , rio >=0.1
     , template-haskell >=2
+    , text >=2
     , time >=1
     , vec >=0.4
     , which >=0.2

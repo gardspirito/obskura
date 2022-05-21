@@ -8,7 +8,7 @@
         mkShell {
           nativeBuildInputs = [
             mongodb
-            stack
+            stack haskell-language-server
             spago purescript
             (pkgs.writeShellScriptBin "faco" ''
               set -e

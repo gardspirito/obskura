@@ -1,386 +1,284 @@
-module MongoKod where--(MongoKod(..), AutoMongoKod, kodigDok, malkodigDok) where
+module MongoKod where
 
 import Data.Bson
-  ( Binary(..)
-  , Field((:=))
-  , Function(..)
-  , Javascript
-  , MD5(..)
-  , MinMaxKey
-  , MongoStamp(..)
-  , ObjectId
-  , Regex
-  , Symbol(..)
-  , UUID(..)
-  , UserDefined(..)
-  , Val(cast', val)
-  , Value(..)
-  , (=:), Document
-  )
 import Data.Time.Clock (UTCTime)
 import Data.Time.Clock.POSIX (POSIXTime)
 import GHC.Generics as GHC
-  ( C1
-  , D1
-  , Generic(..)
-  , K1(K1)
-  , M1(M1)
-  , Meta(MetaCons, MetaSel)
-  , Rec0
-  , S1,type  (:*:) ((:*:)), type (:+:) (L1, R1), U1 (U1)
-  )
 import GHC.TypeLits as GHC (KnownSymbol, symbolVal)
+import Unsafe.Coerce (unsafeCoerce)
 import RIO
-  ( Applicative(pure)
-  , Bool (True, False)
-  , Char
-  , Double
-  , Either (Left, Right)
-  , Eq((==))
-  , Float
-  , Int
-  , Int32
-  , Int64
-  , Integer
-  , Maybe(..)
-  , Num((+))
-  , Proxy(Proxy)
-  , Semigroup((<>))
-  , Text
-  , ($)
-  , (.)
-  , (<$>)
-  , fst
-  , tshow
-  , (<|>), (>>>), id, otherwise, Void, absurd, maybeToList, maybe
-  )
-import qualified RIO.Partial as P
 import qualified RIO.HashMap as HM
 import qualified RIO.Text as T
-import qualified RIO.List as L
 import Data.Kind
-import Control.Monad.Except
+import Control.Monad.State
+import qualified Language.Haskell.TH as TH
 
-class GMongoKod f (dok :: Bool) where
-  gkodig :: f a -> Value
-class GMongoMalkod f (dok :: Bool) where
-  gmalkodig :: Value -> Maybe (f a)
+-- Bedaŭrinde, mi ne estis sufiĉe saĝa por ĝuste pritrakti kaĉon el tipoj, kiu okazis
+-- en ĉi tiu modulo. Estus tre bone se iu (ekzemple mi mem) povus reviziti ĉi tiun
+-- dosieron kaj forigi `unsafeCoerce`-ojn.
 
-type family Au a b where
-  Au 'True _ = 'True
-  Au 'False b = b
+-- | Kvanto de kampoj por kodita objekto. Uzatas por optimumigoj.
+data KodilKv = Kv0 | Kv1 | KvPlur
 
-type family DokStr (rep :: Type -> Type) where
-  DokStr (D1 _ x) = DokStr x 
-  DokStr (a :+: b) = Au (DokStr a) (DokStr b)
-  DokStr (C1 _ U1) = 'False
-  DokStr (C1 _ _) = 'True
+type family SumKv kv1 kv2 where
+  SumKv 'Kv0 x = x
+  SumKv x 'Kv0 = x
+  SumKv 'Kv1 'Kv1 = 'KvPlur
+  SumKv 'Kv1 'KvPlur = 'KvPlur
+  SumKv 'KvPlur _ = 'KvPlur
 
-alAkiril :: [Field] -> Text -> Maybe Value
-alAkiril d x = HM.lookup x (HM.fromList $ alTup <$> d)
-  where
-    alTup (a := b) = (a, b)
+data MalkodErar = FormatErar | NulErar
 
--- Ne estas branĉoj, do ni kodigas strukturon ne konservante etikedon.
-instance GEnhavKod e [Field] => GMongoKod (D1 m1 (C1 m2 e)) dokStr where
-  gkodig (M1 (M1 x)) = Doc $ fst $ kodigEn x ([], 0)
-instance GEnhavMalkod e Text => GMongoMalkod (D1 m1 (C1 m2 e)) dokStr where
-  gmalkodig (Doc d) =
-    let ?mk = alAkiril d in
-      M1 . M1 . fst <$> malkodigEn 0
-  gmalkodig _ = Nothing
+-- | Preterlasebla kampo, kiu ne necese estu en kodigrezulto.
+data Preter a = Inkluziv !a | Preterlas deriving Generic
 
-class GEtikedKod f k where
-  kodigEt :: f a -> k -> Maybe (Text, k)
-class GEtikedMalkod f sxlos where
-  malkodigEt :: MonadPlus m => (?mk :: sxlos -> m Value) => Text -> m (f a)
+type ValKodil a kv = Either (a -> Value, Value -> Maybe a) (Kodil a kv 'True)
 
--- Kodigi kun etikedo
-instance GEtikedKod (a :+: b) [Field]
-    => GMongoKod (D1 m (a :+: b)) 'True where
-  gkodig (M1 x) =
-    let (et, rest) = P.fromJust $ kodigEt x [] in
-      Doc $ ("_et" =: et):rest
-instance GEtikedMalkod (a :+: b) Text
-    => GMongoMalkod (D1 m (a :+: b)) 'True where
-  gmalkodig (Doc d) =
-    let ?mk = alAkiril d in do
-      String et <- ?mk "_et"
-      M1 <$> malkodigEt et
-  gmalkodig _ = Nothing
+-- | Kodilo, uzota nur por malkodado de datumo.
+-- | Ĉi tiu limigo ebligas nur-une direkta mapado de kodilo.
+type MalkodKodil a = (forall b kv br. Kodil b kv br -> Either MalkodErar b) -> Either MalkodErar a
 
--- Konservi nur etikedon (DokStr rep ~ 'False => la strukturo ne enhavas
--- datumon krom etikedo)
-instance GEtikedKod (a :+: b) () => GMongoKod (D1 m (a :+: b)) 'False where
-  gkodig (M1 x) = String $ fst $ P.fromJust $ kodigEt x ()
-instance GEtikedMalkod (a :+: b) Void => GMongoMalkod (D1 m (a :+: b)) 'False where
-  gmalkodig (String x) = let ?mk = absurd in M1 <$> malkodigEt @_ @_ @Maybe x 
-  gmalkodig _ = Nothing
+-- | Ĝenerala priskribo de kodigo kaj malkodigo de objektoj.
+-- | @Kodil a@ konsistas ambaŭ kodigon kaj malkodigon.
+-- | Kiam ambaŭ aperas en sama konstruilo samtempe, kodilo aperas antaŭ malkodilo.
+-- | @kv@ priskribas nombro de kampoj de kodigata objekto. Depende de tio okazas optimumigoj.
+-- | @br@ certigas, ke KodAu estas ĉiam suprnivela. Alio ne estas permesata pro Mongo kunteksto.
+data Kodil a (kv :: KodilKv) (br :: Bool) where
+  KodSum :: !(Kodil a kv1 'False) -> !(Kodil b kv2 'False) 
+              -> Kodil (a, b) (SumKv kv1 kv2) br
+  KodMap :: !(b -> a) -> !(Either MalkodErar a -> Either MalkodErar b)
+              -> !(Kodil a kv br) -> Kodil b kv br
+  KodPur :: !a -> Kodil a kv br
+  KodEn :: DatumInterfac kv => !Text -> ValKodil a kv -> Kodil a 'Kv1 br
+  KodAu :: DatumInterfac (SumKv 'Kv1 kv) => !Text -> !(KodVar a kv) -> !(HashMap Text (MalkodKodil a))
+              -> Kodil a (SumKv 'Kv1 kv) 'True
+  KodPreter :: !(Kodil a kv 'False) -> Kodil (Preter a) kv br
 
-instance (GEtikedKod a k, GEtikedKod b k)
-    => GEtikedKod (a :+: b) k where
-  kodigEt (L1 x) = kodigEt x
-  kodigEt (R1 x) = kodigEt x
-instance (GEtikedMalkod a sxlos, GEtikedMalkod b sxlos)
-    => GEtikedMalkod (a :+: b) sxlos where
-  malkodigEt n = (L1 <$> malkodigEt @a n) <|> (R1 <$> malkodigEt @b n)
+-- | Priskribo de plurvarianta strukturo.
+data KodVar a kv where
+  KodVarFolio :: !Text -> !(Kodil a kv 'False) -> KodVar a kv
+  KodVarAu :: !(KodVar l kv1) -> !(KodVar r kv2)
+    -> !(a -> Either l r) -> !(l -> a) -> !(r -> a) -> KodVar a (SumKv kv1 kv2)
 
-instance (KnownSymbol nom, GEnhavKod e k) 
-    => GEtikedKod (C1 ('MetaCons nom m1 m2) e) k where
-  kodigEt (M1 x) k = Just (T.pack $ symbolVal @nom Proxy, fst $ kodigEn x (k, 0))
-instance (KnownSymbol nom, GEnhavMalkod e sxlos) 
-    => GEtikedMalkod (C1 ('MetaCons nom m1 m2) e) sxlos where
-  malkodigEt nom =
-    if T.pack (symbolVal @nom Proxy) == nom then
-      M1 . fst <$> malkodigEn 0
-    else
-      mzero
+kodAu :: DatumInterfac (SumKv 'Kv1 kv) => Text -> KodVar a kv -> Kodil a (SumKv 'Kv1 kv) 'True
+kodAu t var = KodAu t var (kalkulVar var) where
+  kalkulVar :: KodVar b kv -> HashMap Text (MalkodKodil b)
+  kalkulVar (KodVarFolio n v) = HM.singleton n (\f -> f v) -- ($) ne amikas kun impredicative polymorphism.
+  kalkulVar (KodVarAu l d _ lm dm) =
+      aplikiAl l lm <> aplikiAl d dm
+    where
+      aplikiAl :: KodVar a kv -> (a -> b) -> HashMap Text (MalkodKodil b)
+      aplikiAl variant levil = (\nelevita -> \legil -> levil <$> (nelevita legil)) <$> kalkulVar variant
 
-class GEnhavKod f k where
-  kodigEn :: f a -> (k, Int) -> (k, Int)
-class GEnhavMalkod f sxlos where
-  malkodigEn :: MonadPlus m => (?mk :: sxlos -> m Value) => Int -> m (f a, Int)
+kodMap :: (b -> a) -> (Either MalkodErar a -> Either MalkodErar b) -> Kodil a kv br -> Kodil b kv br
+kodMap f1 mf1 (KodMap f2 mf2 x) = KodMap (f2 . f1) (mf1 . mf2) x
+kodMap f mf x = KodMap f mf x
 
-instance forall a b k. (GEnhavKod a k, GEnhavKod b k) => GEnhavKod (a :*: b) k where
-  kodigEn (a :*: b) = kodigEn a >>> kodigEn b
-instance forall a b mk. (GEnhavMalkod a mk, GEnhavMalkod b mk) 
-    => GEnhavMalkod (a :*: b) mk where
-  malkodigEn n1 = do
-    (a, n2) <- malkodigEn @a n1
-    (b, n3) <- malkodigEn @b n2
-    pure (a :*: b, n3)
+kodMapLiv :: (b -> a) -> (a -> b) -> Kodil a kv br -> Kodil b kv br
+kodMapLiv f mf = kodMap f (mf <$>)
 
-{-
-kodigCxel :: forall a. MongoKod a => Text -> a -> [Field] -> [Field]
-kodigCxel nom v k = do
-  let kodigita = kodig v
-  if not (kodigNul @a) && kodigita == Null then
-    k
-  else
-    (nom =: kodigita):k
+type Legil = Text -> Either MalkodErar Value
 
-malkodigCxel :: forall a. (MongoMalkod a, (?mk :: GAkiril)) => Text -> Maybe a
-malkodigCxel nom = malkodig v
-  where
-      v = fromMaybe Null $ ?mk nom
--}
+-- | Diversaj interfacoj al efektiva datumo depende de KodilKv.
+-- | La klaso difinas funkcioj por legado kaj skribado de datumo pri objekto.
+class DatumInterfac (kv :: KodilKv) where
+  interfacLeg :: Value -> Either MalkodErar Legil
+  unsafeSkr :: [(Text, Value)] -> Value
 
-instance MongoKod a => GEnhavKod (S1 ('MetaSel 'Nothing m1 m2 m3) (Rec0 a)) [Field] where
-  kodigEn (M1 (K1 x)) (k, n) = 
-    (maybeToList (kodigCxel ("_"<>tshow n) x) <> k, n+1)
-instance MongoMalkod a => GEnhavMalkod (S1 ('MetaSel 'Nothing m1 m2 m3) (Rec0 a)) Text where
-  malkodigEn n = do
-    v <- malkodigCxel ("_"<>tshow n)
-    pure (M1 $ K1 v, n+1)
+class DatumInterfac (MKodilKv a) => MongoKodil a where
+  type MKodilKv a :: KodilKv
+  type MKodilKv a = 'KvPlur
+  type MKodilCxelKv a :: KodilKv
+  type MKodilCxelKv a = 'Kv1
+  kodil :: ValKodil a (MKodilKv a)
+  kodilCxel :: Text -> Kodil a (MKodilCxelKv a) br
 
-instance forall a m1 m2 m3 nom. (KnownSymbol nom, MongoKod a)
-    => GEnhavKod (S1 ('MetaSel ('Just nom) m1 m2 m3) (Rec0 a)) [Field] where
-  kodigEn (M1 (K1 x)) (k, n) =
-    (maybeToList (kodigCxel (T.pack $ symbolVal @nom Proxy) x) <> k, n)
-instance forall a m1 m2 m3 nom. (KnownSymbol nom, MongoMalkod a)
-    => GEnhavMalkod (S1 ('MetaSel ('Just nom) m1 m2 m3) (Rec0 a)) Text where
-  malkodigEn n = do
-    v <- malkodigCxel (T.pack $ symbolVal @nom Proxy)
-    pure (M1 $ K1 v, n)
+  default kodil :: (Generic a, GMongoKodil (Rep a), MKodilKv a ~ GMKodilKv (Rep a)) 
+      => ValKodil a (MKodilKv a)
+  kodil = Right $ kodMapLiv GHC.from GHC.to $ gkodil @(Rep a)
+  default kodilCxel :: MKodilCxelKv a ~ 'Kv1 
+      => Text -> Kodil a (MKodilCxelKv a) br
+  kodilCxel nom = KodEn nom kodil
 
-instance GEnhavKod U1 k where
-  kodigEn U1 = id
-instance GEnhavMalkod U1 sxlos where
-  malkodigEn n = pure (U1, n)
+class GMongoKodil rep where
+  type GMKodilKv (rep :: Type -> Type) :: KodilKv
+  gkodil :: Kodil (rep a) (GMKodilKv rep) 'True
 
-class MongoKod a where
-  kodig :: a -> Value
-  kodigCxel :: Text -> a -> Maybe Field
+class GMongoKodilAu rep where
+  type GMKodilAuKv (rep :: Type -> Type) :: KodilKv
+  type GMKodilAuEtikedKv (rep :: Type -> Type) :: KodilKv
+  gkodilAu :: KodVar (rep a) (GMKodilAuKv rep)
+
+class GMongoKodilStr rep where
+  type GMKodilStrKv (rep :: Type -> Type) :: KodilKv
+  gkodilStr :: State Int (Kodil (rep a) (GMKodilStrKv rep) 'False)
+
+instance (GMongoKodilAu a, DatumInterfac (SumKv 'Kv1 (GMKodilAuKv a))) => GMongoKodil (D1 m a) where
+  type GMKodilKv (D1 m a) = (SumKv (GMKodilAuEtikedKv a) (GMKodilAuKv a))
+  gkodil = kodMapLiv unM1 M1 $ case gkodilAu @a of
+    KodVarFolio _ k -> unsafeCoerce k
+    au -> unsafeCoerce $ kodAu "_et" au
+
+instance (GMongoKodilAu a, GMongoKodilAu b) => GMongoKodilAu (a :+: b) where
+  type GMKodilAuKv (a :+: b) = SumKv (GMKodilAuKv a) (GMKodilAuKv b)
+  type GMKodilAuEtikedKv (a :+: b) = 'Kv1
+  gkodilAu = KodVarAu (gkodilAu @a) (gkodilAu @b) (\case
+      L1 x -> Left x
+      R1 x -> Right x
+    ) L1 R1
+
+instance (KnownSymbol n, GMongoKodilStr a) => GMongoKodilAu (C1 ('MetaCons n m1 m2) a) where
+  type GMKodilAuKv (C1 ('MetaCons n m1 m2) a) = GMKodilStrKv a
+  type GMKodilAuEtikedKv (C1 ('MetaCons n m1 m2) a) = 'Kv0
+  gkodilAu =
+    KodVarFolio
+      (T.pack $ symbolVal @n Proxy)
+      (kodMapLiv unM1 M1 $
+        evalState (gkodilStr @a) 0)
+
+instance (GMongoKodilStr a, GMongoKodilStr b) => GMongoKodilStr (a :*: b) where
+  type GMKodilStrKv (a :*: b) = SumKv (GMKodilStrKv a) (GMKodilStrKv b)
+  gkodilStr =
+    let sm = KodSum <$> gkodilStr @a <*> gkodilStr @b in
+      kodMapLiv (\(a :*: b) -> (a, b)) (uncurry (:*:)) <$> sm
+
+instance (MongoKodil v, KnownSymbol s)
+  => GMongoKodilStr (S1 ('MetaSel
+        ('Just s)
+        m1 m2 m3)
+      (Rec0 v)) where
+  type GMKodilStrKv (S1 ('MetaSel ('Just s) m1 m2 m3) (Rec0 v)) = MKodilCxelKv v
+  gkodilStr =
+    pure $ kodMapLiv (unK1 . unM1) (M1 . K1) $ kodilCxel @v (T.pack $ symbolVal @s Proxy)
+
+instance MongoKodil v
+  => GMongoKodilStr (S1 ('MetaSel
+        'Nothing
+        m1 m2 m3)
+      (Rec0 v)) where
+  type GMKodilStrKv (S1 ('MetaSel 'Nothing m1 m2 m3) (Rec0 v)) = MKodilCxelKv v
+  gkodilStr = do
+    n <- get
+    modify (+1)
+    pure $ kodMapLiv (unK1 . unM1) (M1 . K1) $ kodilCxel @v ("_" <> tshow n)
+
+instance GMongoKodilStr U1 where
+  type GMKodilStrKv U1 = 'Kv0
+  gkodilStr = pure $ KodPur U1
+
+$(join <$> traverse 
+  (\tip -> 
+    [d| instance MongoKodil $(pure $ TH.ConT tip) where 
+          kodil = Left (val, cast') 
+    |]) 
+  [ ''Bool, ''Char, ''Double, ''Float, ''Int, ''Int32
+  , ''Int64, ''Integer, ''Text, ''UTCTime, ''POSIXTime
+  , ''ObjectId, ''MinMaxKey, ''MongoStamp, ''Data.Bson.Symbol
+  , ''Javascript, ''Regex, ''UserDefined, ''UUID, ''Function
+  , ''Binary, ''Value, ''Field])
+
+legMapAkir :: HashMap Text b -> Text -> Either MalkodErar b
+legMapAkir font pet = case HM.lookup pet font of
+  Just r -> Right r
+  Nothing -> Left NulErar
   
-  default kodig :: (r ~ Rep a, m ~ DokStr r, Generic a, GMongoKod r m) => a -> Value
-  kodig x = gkodig @_ @(DokStr (Rep a)) (GHC.from x)
+instance DatumInterfac 'Kv0 where
+  interfacLeg _ = Right $ const $ Left NulErar
+  unsafeSkr _ = Null
 
-  kodigCxel nom v = Just (nom := kodig v) 
+instance DatumInterfac 'Kv1 where
+  interfacLeg v = Right $ const (Right v)
+  unsafeSkr [(_, x)] = x
+  unsafeSkr _ = undefined
 
+instance DatumInterfac 'KvPlur where
+  interfacLeg (Doc d) = Right $ legMapAkir $ HM.fromList ((\(a := b) -> (a, b)) <$> d)
+  interfacLeg _ = Left FormatErar
+  unsafeSkr = Doc . fmap (uncurry (:=))
 
-class MongoKod a => MongoMalkod a where
-  malkodig :: Value -> Maybe a
-  default malkodig :: (r ~ Rep a, m ~ DokStr r, Generic a, GMongoMalkod r m) => Value -> Maybe a
-  malkodig x = GHC.to <$> gmalkodig @_ @(DokStr (Rep a)) x
-
-  malkodigCxel :: MonadPlus m => (?mk :: Text -> m Value) => Text -> m a
-  malkodigCxel nom = do
-    v <- ?mk nom
-    maybe mzero pure (malkodig v)
-
-newtype Kovr a = Kovr a
-
-instance Val a => MongoKod (Kovr a) where
-  kodig (Kovr x) = val x
-instance Val a => MongoMalkod (Kovr a) where
-  malkodig x = Kovr <$> cast' x
-
-malkovr :: Val a => Value -> Maybe a
-malkovr x = malkovr' <$> malkodig x where
-  malkovr' (Kovr a) = a
-
-deriving via Kovr Bool instance MongoKod Bool
-instance MongoMalkod Bool where
-  malkodig = malkovr
-
-deriving via Kovr Char instance MongoKod Char
-instance MongoMalkod Char where
-  malkodig = malkovr
-
-deriving via Kovr Double instance MongoKod Double
-instance MongoMalkod Double where
-  malkodig = malkovr
-
-deriving via Kovr Float instance MongoKod Float
-instance MongoMalkod Float where
-  malkodig = malkovr
-
-deriving via Kovr Int instance MongoKod Int
-instance MongoMalkod Int where
-  malkodig = malkovr
-
-deriving via Kovr Int32 instance MongoKod Int32
-instance MongoMalkod Int32 where
-  malkodig = malkovr
-
-deriving via Kovr Int64 instance MongoKod Int64
-instance MongoMalkod Int64 where
-  malkodig = malkovr
-
-deriving via Kovr Integer instance MongoKod Integer
-instance MongoMalkod Integer where
-  malkodig = malkovr
-
-deriving via Kovr Text instance MongoKod Text
-instance MongoMalkod Text where
-  malkodig = malkovr
-
-deriving via Kovr UTCTime instance MongoKod UTCTime
-instance MongoMalkod UTCTime where
-  malkodig = malkovr
-
-deriving via Kovr POSIXTime instance MongoKod POSIXTime
-instance MongoMalkod POSIXTime where
-  malkodig = malkovr
-
-deriving via Kovr ObjectId instance MongoKod ObjectId
-instance MongoMalkod ObjectId where
-  malkodig = malkovr
-
-deriving via Kovr MinMaxKey instance MongoKod MinMaxKey
-instance MongoMalkod MinMaxKey where
-  malkodig = malkovr
-
-deriving via Kovr MongoStamp instance MongoKod MongoStamp
-instance MongoMalkod MongoStamp where
-  malkodig = malkovr
-
-deriving via Kovr Data.Bson.Symbol instance
-         MongoKod Data.Bson.Symbol
-instance MongoMalkod Data.Bson.Symbol where
-  malkodig = malkovr
-
-deriving via Kovr Javascript instance MongoKod Javascript
-instance MongoMalkod Javascript where
-  malkodig = malkovr
-
-deriving via Kovr Regex instance MongoKod Regex
-instance MongoMalkod Regex where
-  malkodig = malkovr
-
-deriving via Kovr UserDefined instance MongoKod UserDefined
-instance MongoMalkod UserDefined where
-  malkodig = malkovr
-
-deriving via Kovr MD5 instance MongoKod MD5
-instance MongoMalkod MD5 where
-  malkodig = malkovr
-
-deriving via Kovr UUID instance MongoKod UUID
-instance MongoMalkod UUID where
-  malkodig = malkovr
-
-deriving via Kovr Function instance MongoKod Function
-instance MongoMalkod Function where
-  malkodig = malkovr
-
-deriving via Kovr Binary instance MongoKod Binary
-instance MongoMalkod Binary where
-  malkodig = malkovr
-
-deriving via Kovr Value instance MongoKod Value
-instance MongoMalkod Value where
-  malkodig = malkovr
-
-deriving via Kovr Field instance MongoKod Field
-instance MongoMalkod Field where
-  malkodig = malkovr
-
-instance MongoKod Void where
-  kodig = absurd
-
-instance MongoKod a => MongoKod [a] where
-  kodig x = Array $ kodig <$> x
-instance MongoMalkod a => MongoMalkod [a] where
-  malkodig (Array x) = sequence $ malkodig @a <$> x
-  malkodig _ = Nothing
-
-instance MongoKod a => MongoKod (Maybe a) where
-  kodig (Just x) = kodig x
-  kodig Nothing = Null
-instance MongoMalkod a => MongoMalkod (Maybe a) where
-  malkodig Null = Just Nothing
-  malkodig x = Just <$> malkodig @a x
-
-instance (MongoKod a, MongoKod b) => MongoKod (a, b)
-instance (MongoMalkod a, MongoMalkod b) => MongoMalkod (a, b)
-
-instance (MongoKod a, MongoKod b, MongoKod c) => MongoKod (a, b, c)
-instance (MongoMalkod a, MongoMalkod b, MongoMalkod c) => MongoMalkod (a, b, c)
-
-instance (MongoKod a, MongoKod b, MongoKod c, MongoKod d) => MongoKod (a, b, c, d)
-instance (MongoMalkod a, MongoMalkod b, MongoMalkod c, MongoMalkod d) => MongoMalkod (a, b, c, d)
-
-instance (MongoKod a, MongoKod b, MongoKod c, MongoKod d, MongoKod e) => MongoKod (a, b, c, d, e)
-instance (MongoMalkod a, MongoMalkod b, MongoMalkod c, MongoMalkod d, MongoMalkod e) => MongoMalkod (a, b, c, d, e)
-
-instance (MongoKod a, MongoKod b, MongoKod c, MongoKod d, MongoKod e, MongoKod f) => MongoKod (a, b, c, d, e, f)
-instance (MongoMalkod a, MongoMalkod b, MongoMalkod c, MongoMalkod d, MongoMalkod e, MongoMalkod f) => MongoMalkod (a, b, c, d, e, f)
-
-kodigDok :: MongoKod a => a -> Document
-kodigDok e = case kodig e of
-  Doc x -> x
-  x -> ["_" =: x]
-
-malkodigDok :: MongoMalkod a => Document -> Maybe a
-malkodigDok x
-  | Just ("_" := y) <- L.find f x
-    = malkodig y
-  | otherwise
-    = malkodig (Doc x)
+leg :: MongoKodil a
+    => Value -> Either MalkodErar a
+leg = leg' kodil
   where
-    f ("_" := _) = True
-    f _ = False
+    leg' :: forall a kv. DatumInterfac kv => ValKodil a kv -> Value -> Either MalkodErar a
+    leg' valK v = case valK of
+      Left (_, mf) -> case mf v of
+        Just r -> Right r
+        Nothing -> Left FormatErar
+      Right k -> do
+        petf <- interfacLeg @kv v
+        perPetf' petf k
 
-data Preter a = Inkluziv !a | Preterlas
+    perPetf' :: Legil -> Kodil b kv br -> Either MalkodErar b
+    perPetf' petf = leg'' where
+      leg'' :: Kodil b kv br -> Either MalkodErar b
+      leg'' (KodSum a b) = (,) <$> leg'' a <*> leg'' b
+      leg'' (KodMap _ mf k) = mf $ leg'' k
+      leg'' (KodPur x) = Right x
+      leg'' (KodEn nom k) = petf nom >>= leg' k
+      leg'' (KodAu etikedCxel _ legVar) =
+        petf etikedCxel >>= leg @Text >>= legMapAkir legVar >>= ($ leg'')
+      leg'' (KodPreter k) = case leg'' k of
+        Right x -> Right $ Inkluziv x
+        Left NulErar -> Right Preterlas
+        Left FormatErar -> Left FormatErar
 
-instance MongoKod a => MongoKod (Preter a) where
-  kodig (Inkluziv x) = kodig x
-  kodig Preterlas = Null
+skr :: MongoKodil a => a -> Value
+skr = skr' kodil where
+    skr' :: forall a kv. DatumInterfac kv => ValKodil a kv -> a -> Value
+    skr' valK v = case valK of
+      Left (f, _) -> f v
+      Right k -> unsafeSkr @kv $ skr'' k v
 
-  kodigCxel nom (Inkluziv x) = kodigCxel nom x
-  kodigCxel _ Preterlas = Nothing
+    skr'' :: Kodil b kv br -> b -> [(Text, Value)]
+    skr'' (KodSum k1 k2) (a, b) = skr'' k1 a <> skr'' k2 b
+    skr'' (KodMap f _ k) v = skr'' k $ f v
+    skr'' (KodPur _) _ = []
+    skr'' (KodEn nom k) v = [(nom, skr' k v)]
+    skr'' (KodAu etikedCxel kodVar _) orV = skrVar kodVar orV where
+      skrVar :: KodVar b kv -> b -> [(Text, Value)]
+      skrVar (KodVarFolio n k) v = [(etikedCxel, skr n)] <> skr'' k v
+      skrVar (KodVarAu lVar dVar kazAnalizil _ _) v = case kazAnalizil v of
+        Left l -> skrVar lVar l
+        Right d -> skrVar dVar d
+    skr'' (KodPreter k) v = case v of
+      Inkluziv v' -> skr'' k v'
+      Preterlas -> []
 
-type NeTrovitaCxelo = ()
+kodigDok :: MongoKodil a => a -> Document
+kodigDok e = case skr e of
+  Doc x -> x
+  x -> ["_" := x]
 
-instance MongoMalkod a => MongoMalkod (Preter a) where
-  malkodig Null = Just Preterlas
-  malkodig x = Inkluziv <$> malkodig x
+malkodigDok :: MongoKodil a => Document -> Maybe a
+malkodigDok v = hush $ leg $ case v of
+    ["_" := x] -> x
+    x -> Doc x
+  where
+    hush :: Either a b -> Maybe b
+    hush (Left _)  = Nothing
+    hush (Right x) = Just x
 
-  malkodigCxel nom =
-    let oldmk = ?mk in
-      let ?mk = \x -> ExceptT (Right <$> oldmk x) <|> throwError () in do
-        v <- runExceptT $ malkodigCxel nom
-        pure $ case v of
-          Left () -> Preterlas
-          Right x -> Inkluziv x
+instance (MongoKodil a, DatumInterfac ((SumKv 'Kv1 (MKodilCxelKv a))))
+     => MongoKodil (Preter a) where
+  type MKodilKv (Preter a) = SumKv 'Kv1 (MKodilCxelKv a)
+  type MKodilCxelKv (Preter a) = MKodilCxelKv a
+  kodilCxel = KodPreter . kodilCxel @a
+
+newtype Gxis a = Gxis a deriving Generic
+
+instance (MongoKodil a, DatumInterfac (MKodilCxelKv a), DatumInterfac (SumKv 'Kv1 (MKodilCxelKv a))) => MongoKodil (Gxis a) where
+  type MKodilKv (Gxis a) = MKodilCxelKv a
+  type MKodilCxelKv (Gxis a) = MKodilKv a
+  kodilCxel kat = 
+      kodMapLiv (\(Gxis x) -> x) Gxis $ case kodil @a of
+        Left k -> unsafeCoerce $ KodEn @'Kv1 kat $ Left k -- Eble ni evitu ĉi tiun uzon de coerce.
+        Right k -> p k
+    where
+      p :: Kodil b kv br1 -> Kodil b kv br2
+      p (KodSum k1 k2) = KodSum (p k1) (p k2) 
+      p (KodMap f mf k) = KodMap f mf $ p k
+      p (KodPur x) = KodPur x
+      p (KodEn nom v) = KodEn ((kat <> ".") <> nom) v
+      p (KodPreter k) = KodPreter $ p k
+      p (KodAu et a1 a2) = unsafeCoerce $ KodEn kat $ Right $ KodAu et a1 a2

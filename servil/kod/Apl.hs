@@ -59,6 +59,7 @@ import Yesod
 import qualified Yesod.Core.Content as YesCont
 import Database.MongoDB (Host, host, connect)
 import System.Environment.MrEnv (envAsString)
+import MongoKod_
 
 -- FARENDE: Agordaro por retpoŝtadreso de sendanto.
 -- FARENDE: Totaleco de IO operacioj (specife de\ readFile, multe uzata en Lingvar)

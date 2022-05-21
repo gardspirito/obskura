@@ -34,6 +34,7 @@ dependencies:
 - bson >= 0.4
 - mr-env >= 0.1
 - mtl >= 2
+- text >= 2
 
 executables:
   obskura:
@@ -82,3 +83,5 @@ executables:
     - -XPolyKinds
     - -XStandaloneKindSignatures
     - -XNamedFieldPuns
+    - -XInstanceSigs
+    - -XImpredicativeTypes

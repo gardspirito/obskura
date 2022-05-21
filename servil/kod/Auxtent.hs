@@ -73,6 +73,7 @@ import RIO
   , maybe
   , threadDelay
   , unless
+  , traceIO
   )
 import qualified RIO.Text as T
 import qualified RIO.Text.Lazy as TL
